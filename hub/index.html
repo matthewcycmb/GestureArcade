@@ -43,6 +43,7 @@
     .header {
       position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       margin-bottom: 40px;
@@ -54,6 +55,15 @@
       letter-spacing: -0.5px;
       text-align: center;
       text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .header-desc {
+      font-size: 15px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      text-align: center;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+      margin-top: 8px;
     }
 
     .header-icons {
@@ -494,6 +504,7 @@
   <div class="container">
     <header class="header">
       <h1>Welcome, Matthew</h1>
+      <p class="header-desc">Control every game with just your hands. No controllers, no setup — just play.</p>
       <div class="header-icons">
         <div class="icon-btn" title="Profile">
           <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
