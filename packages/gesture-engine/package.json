@@ -1,0 +1,23 @@
+{
+  "name": "@gesture-arcade/engine",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/gesture-engine.js",
+  "module": "./dist/gesture-engine.js",
+  "exports": {
+    ".": {
+      "import": "./dist/gesture-engine.js",
+      "default": "./dist/gesture-engine.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.18"
+  }
+}

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gesture Arcade — Engine Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      padding: 1rem;
+      background: #111;
+      border-bottom: 2px solid #333;
+    }
+    header h1 { font-size: 1.5rem; color: #fff; }
+    header p { font-size: 0.85rem; color: #888; margin-top: 0.25rem; }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1rem;
+      max-width: 1100px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
+
+    .video-area {
+      position: relative;
+      background: #111;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+    #videoFeed, #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #videoFeed { transform: scaleX(-1); object-fit: cover; }
+    #overlay { transform: scaleX(-1); pointer-events: none; }
+
+    .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+    .panel {
+      background: #151515;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .panel h2 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      margin-bottom: 0.75rem;
+    }
+
+    .checklist label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+      font-size: 0.9rem;
+    }
+    .checklist input[type="checkbox"] { accent-color: #4ade80; pointer-events: none; }
+    .checklist .detected { color: #4ade80; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .stat {
+      text-align: center;
+      padding: 0.5rem;
+      background: #1a1a1a;
+      border-radius: 4px;
+    }
+    .stat .value { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .stat .label { font-size: 0.7rem; color: #666; text-transform: uppercase; }
+
+    #log {
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    #log .entry { padding: 0.15rem 0; border-bottom: 1px solid #1a1a1a; }
+    #log .time { color: #555; }
+    #log .gesture-name { color: #60a5fa; font-weight: 600; }
+    #log .direction { color: #f59e0b; }
+
+    #startBtn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #startBtn:hover { background: #1d4ed8; }
+    #startBtn:disabled { background: #333; cursor: not-allowed; }
+    #startBtn.running { background: #dc2626; }
+    #startBtn.running:hover { background: #b91c1c; }
+
+    #testBtn {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      background: #1e1e1e;
+      color: #aaa;
+      border: 1px solid #333;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    #testBtn:hover { background: #2a2a2a; }
+
+    #testResults {
+      margin-top: 0.5rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+    }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+
+    .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gesture Arcade — Engine Demo</h1>
+    <p>Perform hand gestures in front of your webcam to test detection</p>
+  </header>
+
+  <div class="container">
+    <div>
+      <div class="video-area">
+        <div class="placeholder" id="placeholder">Click "Start Camera" to begin</div>
+        <video id="videoFeed" playsinline autoplay muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <button id="startBtn">Start Camera</button>
+      <button id="testBtn">Run Automated Tests</button>
+      <div id="testResults"></div>
+    </div>
+
+    <div class="sidebar">
+      <div class="panel">
+        <h2>Gesture Checklist</h2>
+        <div class="checklist" id="checklist"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Performance</h2>
+        <div class="stats">
+          <div class="stat"><div class="value" id="fps">0</div><div class="label">FPS</div></div>
+          <div class="stat"><div class="value" id="latency">0</div><div class="label">Latency (ms)</div></div>
+          <div class="stat"><div class="value" id="confidence">0</div><div class="label">Confidence</div></div>
+          <div class="stat"><div class="value" id="hands">0</div><div class="label">Hands</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Gesture Log</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { GestureEngine, GESTURES, LANDMARKS, gestureDetectors } from './index.js';
+
+    const ALL_GESTURES = Object.values(GESTURES);
+    const detected = new Set();
+    let engine = null;
+    let running = false;
+
+    // --- Checklist ---
+    const checklistEl = document.getElementById('checklist');
+    for (const g of ALL_GESTURES) {
+      const label = document.createElement('label');
+      label.id = `check-${g}`;
+      label.innerHTML = `<input type="checkbox" disabled /> ${g.replace(/_/g, ' ')}`;
+      checklistEl.appendChild(label);
+    }
+
+    function markDetected(gesture) {
+      if (detected.has(gesture)) return;
+      detected.add(gesture);
+      const label = document.getElementById(`check-${gesture}`);
+      if (label) {
+        label.querySelector('input').checked = true;
+        label.classList.add('detected');
+      }
+    }
+
+    // --- Log ---
+    const logEl = document.getElementById('log');
+    function addLog(gesture, extras = {}) {
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      const time = new Date().toLocaleTimeString();
+      let text = `<span class="time">${time}</span> <span class="gesture-name">${gesture}</span>`;
+      if (extras.direction) text += ` <span class="direction">${extras.direction}</span>`;
+      if (extras.velocity) text += ` v=${extras.velocity.toFixed(3)}`;
+      entry.innerHTML = text;
+      logEl.prepend(entry);
+      // Keep max 50 entries
+      while (logEl.children.length > 50) logEl.removeChild(logEl.lastChild);
+    }
+
+    // --- Performance ---
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+    const fpsEl = document.getElementById('fps');
+    const latencyEl = document.getElementById('latency');
+    const confidenceEl = document.getElementById('confidence');
+    const handsEl = document.getElementById('hands');
+
+    // --- Overlay ---
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+
+    // Hand connections for drawing
+    const CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [0,9],[9,10],[10,11],[11,12],
+      [0,13],[13,14],[14,15],[15,16],
+      [0,17],[17,18],[18,19],[19,20],
+      [5,9],[9,13],[13,17],
+    ];
+
+    function drawLandmarks(allLandmarks) {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const landmarks of allLandmarks) {
+        // Draw connections
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+        ctx.lineWidth = 2;
+        for (const [a, b] of CONNECTIONS) {
+          ctx.beginPath();
+          ctx.moveTo(landmarks[a].x * canvas.width, landmarks[a].y * canvas.height);
+          ctx.lineTo(landmarks[b].x * canvas.width, landmarks[b].y * canvas.height);
+          ctx.stroke();
+        }
+
+        // Draw points
+        for (let i = 0; i < landmarks.length; i++) {
+          const { x, y } = landmarks[i];
+          ctx.beginPath();
+          ctx.arc(x * canvas.width, y * canvas.height, i === 0 ? 5 : 3, 0, Math.PI * 2);
+          ctx.fillStyle = i === 0 ? '#f59e0b' : '#60a5fa';
+          ctx.fill();
+        }
+      }
+    }
+
+    // --- Engine ---
+    const startBtn = document.getElementById('startBtn');
+    const placeholder = document.getElementById('placeholder');
+    const videoEl = document.getElementById('videoFeed');
+
+    startBtn.addEventListener('click', async () => {
+      if (running) {
+        engine.stop();
+        running = false;
+        startBtn.textContent = 'Start Camera';
+        startBtn.classList.remove('running');
+        videoEl.srcObject = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        placeholder.style.display = '';
+        return;
+      }
+
+      startBtn.disabled = true;
+      startBtn.textContent = 'Starting...';
+
+      try {
+        engine = new GestureEngine();
+
+        // Listen for every gesture
+        for (const g of ALL_GESTURES) {
+          engine.on(g, (payload) => {
+            markDetected(g);
+            addLog(g, payload);
+            confidenceEl.textContent = payload.confidence.toFixed(2);
+          });
+        }
+
+        // Frame handler for overlay + stats
+        engine.on('frame', (data) => {
+          frameCount++;
+          const now = performance.now();
+          if (now - lastFpsTime >= 1000) {
+            fpsEl.textContent = frameCount;
+            frameCount = 0;
+            lastFpsTime = now;
+          }
+          handsEl.textContent = data.landmarks.length;
+          drawLandmarks(data.landmarks);
+
+          const elapsed = performance.now() - now;
+          latencyEl.textContent = elapsed.toFixed(1);
+        });
+
+        await engine.start();
+
+        // Mirror the engine's video into our visible element
+        const engineVideo = engine.getVideoElement();
+        if (engineVideo && engineVideo.srcObject) {
+          videoEl.srcObject = engineVideo.srcObject;
+        }
+
+        placeholder.style.display = 'none';
+        running = true;
+        startBtn.textContent = 'Stop Camera';
+        startBtn.classList.add('running');
+      } catch (err) {
+        console.error('Failed to start:', err);
+        addLog('ERROR: ' + err.message);
+        startBtn.textContent = 'Start Camera';
+      }
+
+      startBtn.disabled = false;
+    });
+
+    // --- Automated Tests ---
+    const testBtn = document.getElementById('testBtn');
+    const testResults = document.getElementById('testResults');
+
+    testBtn.addEventListener('click', async () => {
+      testResults.innerHTML = 'Running tests...\n';
+      let passed = 0;
+      let failed = 0;
+
+      // Import fixtures dynamically
+      const { default: fixtureModule } = await import('./tests/fixtures/landmarks.js').catch(() => ({ default: null }));
+      const fixtures = await import('./tests/fixtures/landmarks.js');
+
+      const tests = [
+        ['PINCH', fixtures.pinchLandmarks],
+        ['POINT', fixtures.pointLandmarks],
+        ['FINGER_GUN', fixtures.fingerGunLandmarks],
+        ['PEACE_SIGN', fixtures.peaceLandmarks],
+        ['THUMBS_UP', fixtures.thumbsUpLandmarks],
+        ['FIST', fixtures.fistLandmarks],
+        ['OPEN_PALM', fixtures.openPalmLandmarks],
+      ];
+
+      for (const [expected, getFixture] of tests) {
+        const landmarks = getFixture();
+        let detectedGesture = null;
+
+        for (const detector of gestureDetectors) {
+          if (detector.temporal) continue;
+          const result = detector.detect(landmarks, {});
+          if (result) {
+            detectedGesture = result.gesture;
+            break;
+          }
+        }
+
+        if (detectedGesture === expected) {
+          testResults.innerHTML += `<span class="pass">PASS</span> ${expected}\n`;
+          passed++;
+        } else {
+          testResults.innerHTML += `<span class="fail">FAIL</span> ${expected} (got: ${detectedGesture})\n`;
+          failed++;
+        }
+      }
+
+      // Swipe test
+      const context = { history: [] };
+      const frames = fixtures.swipeFrameHistory();
+      let swipeResult = null;
+      for (const frame of frames) {
+        const lms = fixtures.landmarksAtWrist(frame.x, frame.y);
+        swipeResult = gestureDetectors.find(d => d.name === 'SWIPE').detect(lms, context);
+      }
+      if (swipeResult && swipeResult.gesture === 'SWIPE') {
+        testResults.innerHTML += `<span class="pass">PASS</span> SWIPE (${swipeResult.extras.direction})\n`;
+        passed++;
+      } else {
+        testResults.innerHTML += `<span class="fail">FAIL</span> SWIPE\n`;
+        failed++;
+      }
+
+      testResults.innerHTML += `\n${passed}/${passed + failed} tests passed`;
+    });
+  </script>
+</body>
+</html>

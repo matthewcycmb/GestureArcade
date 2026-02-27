@@ -1,0 +1,19 @@
+{
+  "name": "gesture-arcade",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "npm -w @gesture-arcade/engine run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0",
+    "vitest": "^3.0.0"
+  }
+}
