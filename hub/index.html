@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gesture Arcade</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background image — vivid at top, fades to dark */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url('./bg.webp') no-repeat 90% 20%;
+      background-size: 120%;
+      filter: brightness(0.5) saturate(1.2);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      display: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 140px 24px 64px;
+    }
+
+    /* Header */
+    .header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-align: center;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .header-icons {
+      display: flex;
+      gap: 12px;
+      position: absolute;
+      right: 0;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: rgba(255,255,255,0.7);
+    }
+
+    /* Section heading */
+    .section-heading {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-heading .arrow {
+      opacity: 0.5;
+      font-size: 18px;
+    }
+
+    /* Card grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Card */
+    .card {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 2.4 / 1;
+      border: 1px solid rgba(100, 180, 255, 0.2);
+      background: linear-gradient(135deg, #1e2d4a 0%, #16213a 100%);
+      cursor: default;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card.available {
+      cursor: pointer;
+    }
+
+    .card.available:hover {
+      transform: translateY(-3px);
+      border-color: rgba(100, 180, 255, 0.5);
+      box-shadow: 0 8px 32px rgba(56, 119, 224, 0.2), 0 0 0 1px rgba(100, 180, 255, 0.15);
+    }
+
+    .card-thumbnail {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Dark scrim over bottom for text readability */
+    .card-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 16px 14px;
+      background: linear-gradient(to top, rgba(10, 15, 30, 0.9) 0%, rgba(10, 15, 30, 0.5) 60%, transparent 100%);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 3px;
+    }
+
+    /* Coming soon overlay */
+    .card.coming-soon .card-thumbnail {
+      filter: brightness(0.35) saturate(0.3);
+    }
+
+    .coming-soon-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lock-icon {
+      width: 28px;
+      height: 28px;
+      opacity: 0.4;
+    }
+
+    .lock-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: rgba(255,255,255,0.5);
+    }
+
+    .coming-soon-text {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.35);
+    }
+
+    /* Modal backdrop */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Modal panel */
+    .modal-panel {
+      background: #1a2440;
+      border: 1px solid rgba(100, 180, 255, 0.25);
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(56, 119, 224, 0.15), 0 16px 48px rgba(0, 0, 0, 0.4);
+      width: 90%;
+      max-width: 440px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 28px;
+      position: relative;
+      transform: translateY(12px) scale(0.97);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-backdrop.open .modal-panel {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-panel h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .modal-close svg {
+      width: 16px;
+      height: 16px;
+      fill: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Modal form elements */
+    .modal-section {
+      margin-bottom: 20px;
+    }
+
+    .modal-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .modal-input:focus {
+      border-color: rgba(100, 180, 255, 0.5);
+    }
+
+    .modal-select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.5)' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .modal-select option {
+      background: #1a2440;
+      color: #fff;
+    }
+
+    /* Slider row */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .slider-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #5b9cf5;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #fff;
+    }
+
+    .slider-value {
+      font-size: 14px;
+      font-weight: 600;
+      min-width: 42px;
+      text-align: right;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Mute toggle */
+    .mute-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .mute-row span {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+      border: none;
+      padding: 0;
+    }
+
+    .toggle.active {
+      background: #5b9cf5;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    /* Sensitivity buttons */
+    .preset-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      flex: 1;
+      padding: 8px 0;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .preset-btn.selected {
+      background: rgba(91, 156, 245, 0.2);
+      border-color: #5b9cf5;
+      color: #fff;
+    }
+
+    /* High scores */
+    .scores-list {
+      list-style: none;
+    }
+
+    .scores-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .scores-list .game-name {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .scores-list .score-val {
+      font-weight: 700;
+      color: #5b9cf5;
+    }
+
+    .no-scores {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.4);
+      font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        text-align: left;
+        padding-right: 100px;
+      }
+
+      .container {
+        padding: 24px 16px 48px;
+      }
+
+      .header-icons {
+        right: 16px;
+        top: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Welcome, Matthew</h1>
+      <div class="header-icons">
+        <div class="icon-btn" title="Profile">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+        </div>
+        <div class="icon-btn" title="Settings">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <div class="section-heading">Most Popular <span class="arrow">&rarr;</span></div>
+
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal-backdrop" id="profileModal">
+    <div class="modal-panel" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('profileModal')">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <h2>Profile</h2>
+      <div class="modal-section">
+        <label class="modal-label">Display Name</label>
+        <input class="modal-input" type="text" id="nameInput" maxlength="24" placeholder="Your name">
+      </div>
+      <div class="modal-section">
+        <label class="modal-label">High Scores</label>
+        <div id="scoresContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-panel" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('settingsModal')">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+      <h2>Settings</h2>
+
+      <div class="modal-section">
+        <label class="modal-label">Sound</label>
+        <div class="slider-row">
+          <input type="range" id="volumeSlider" min="0" max="100" value="80">
+          <span class="slider-value" id="volumeValue">80%</span>
+        </div>
+        <div class="mute-row">
+          <span>Mute all sounds</span>
+          <button class="toggle" id="muteToggle" type="button"></button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <label class="modal-label">Camera</label>
+        <select class="modal-select" id="cameraSelect">
+          <option value="">Default camera</option>
+        </select>
+      </div>
+
+      <div class="modal-section">
+        <label class="modal-label">Hand Tracking Sensitivity</label>
+        <div class="preset-group" id="sensitivityGroup">
+          <button class="preset-btn" data-val="low">Low</button>
+          <button class="preset-btn selected" data-val="normal">Normal</button>
+          <button class="preset-btn" data-val="high">High</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <label class="modal-label">Gesture Cooldown</label>
+        <div class="slider-row">
+          <input type="range" id="cooldownSlider" min="100" max="500" step="50" value="300">
+          <span class="slider-value" id="cooldownValue">300ms</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Settings persistence ---
+    const SETTINGS_KEY = 'gesture-arcade-settings';
+    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird' };
+
+    function getDefaultSettings() {
+      return {
+        displayName: 'Matthew',
+        sound: { volume: 80, muted: false },
+        camera: { deviceId: '' },
+        tracking: { sensitivity: 'normal' },
+        cooldownMs: 300,
+        highScores: { 'flappy-bird': 0 }
+      };
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          const defaults = getDefaultSettings();
+          // Merge to ensure all keys exist
+          return {
+            ...defaults,
+            ...saved,
+            sound: { ...defaults.sound, ...saved.sound },
+            camera: { ...defaults.camera, ...saved.camera },
+            tracking: { ...defaults.tracking, ...saved.tracking },
+            highScores: { ...defaults.highScores, ...saved.highScores }
+          };
+        }
+      } catch (_) {}
+      return getDefaultSettings();
+    }
+
+    function saveSettings(settings) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+
+    let settings = loadSettings();
+
+    // --- Modal open/close ---
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    document.querySelectorAll('.modal-backdrop').forEach(el => {
+      el.addEventListener('click', () => closeModal(el.id));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop.open').forEach(el => closeModal(el.id));
+      }
+    });
+
+    // --- Wire icon buttons ---
+    const iconBtns = document.querySelectorAll('.icon-btn');
+    iconBtns[0].addEventListener('click', () => {
+      populateProfile();
+      openModal('profileModal');
+    });
+    iconBtns[1].addEventListener('click', () => {
+      populateSettings();
+      openModal('settingsModal');
+    });
+
+    // --- Profile modal ---
+    const headerH1 = document.querySelector('.header h1');
+    const nameInput = document.getElementById('nameInput');
+
+    function updateHeaderName() {
+      headerH1.textContent = `Welcome, ${settings.displayName || 'Player'}`;
+    }
+
+    function populateProfile() {
+      nameInput.value = settings.displayName;
+      renderScores();
+    }
+
+    nameInput.addEventListener('input', () => {
+      settings.displayName = nameInput.value.trim() || 'Player';
+      updateHeaderName();
+      saveSettings(settings);
+    });
+
+    function renderScores() {
+      const container = document.getElementById('scoresContainer');
+      const entries = Object.entries(settings.highScores).filter(([, v]) => v > 0);
+      if (entries.length === 0) {
+        container.innerHTML = '<p class="no-scores">No high scores yet. Play a game!</p>';
+        return;
+      }
+      let html = '<ul class="scores-list">';
+      for (const [id, score] of entries) {
+        html += `<li><span class="game-name">${GAME_NAMES[id] || id}</span><span class="score-val">${score}</span></li>`;
+      }
+      html += '</ul>';
+      container.innerHTML = html;
+    }
+
+    // --- Settings modal ---
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+    const muteToggle = document.getElementById('muteToggle');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const sensitivityGroup = document.getElementById('sensitivityGroup');
+    const cooldownSlider = document.getElementById('cooldownSlider');
+    const cooldownValue = document.getElementById('cooldownValue');
+
+    function populateSettings() {
+      volumeSlider.value = settings.sound.volume;
+      volumeValue.textContent = settings.sound.volume + '%';
+      muteToggle.classList.toggle('active', settings.sound.muted);
+      cooldownSlider.value = settings.cooldownMs;
+      cooldownValue.textContent = settings.cooldownMs + 'ms';
+
+      // Sensitivity buttons
+      sensitivityGroup.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.val === settings.tracking.sensitivity);
+      });
+
+      // Camera enumerate
+      enumerateCameras();
+    }
+
+    volumeSlider.addEventListener('input', () => {
+      settings.sound.volume = parseInt(volumeSlider.value);
+      volumeValue.textContent = settings.sound.volume + '%';
+      saveSettings(settings);
+    });
+
+    muteToggle.addEventListener('click', () => {
+      settings.sound.muted = !settings.sound.muted;
+      muteToggle.classList.toggle('active', settings.sound.muted);
+      saveSettings(settings);
+    });
+
+    cooldownSlider.addEventListener('input', () => {
+      settings.cooldownMs = parseInt(cooldownSlider.value);
+      cooldownValue.textContent = settings.cooldownMs + 'ms';
+      saveSettings(settings);
+    });
+
+    sensitivityGroup.addEventListener('click', (e) => {
+      const btn = e.target.closest('.preset-btn');
+      if (!btn) return;
+      settings.tracking.sensitivity = btn.dataset.val;
+      sensitivityGroup.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('selected', b === btn));
+      saveSettings(settings);
+    });
+
+    cameraSelect.addEventListener('change', () => {
+      settings.camera.deviceId = cameraSelect.value;
+      saveSettings(settings);
+    });
+
+    async function enumerateCameras() {
+      try {
+        // Need permission first to get labels
+        await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop()));
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '<option value="">Default camera</option>';
+        cameras.forEach((cam, i) => {
+          const opt = document.createElement('option');
+          opt.value = cam.deviceId;
+          opt.textContent = cam.label || `Camera ${i + 1}`;
+          if (cam.deviceId === settings.camera.deviceId) opt.selected = true;
+          cameraSelect.appendChild(opt);
+        });
+      } catch (_) {
+        // Camera access denied or unavailable — keep default option
+      }
+    }
+
+    // --- Init header name from saved settings ---
+    updateHeaderName();
+
+    // --- Save default settings on first load ---
+    saveSettings(settings);
+
+    const GAMES = [
+      { id: 'flappy-bird', title: 'Flappy Bird', subtitle: 'Pinch to flap', path: '/games/flappy-bird/index.html', available: true },
+      { id: 'coming-2', title: 'Space Shooter', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-3', title: 'Fruit Ninja', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-4', title: 'Pong', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-5', title: 'Brick Breaker', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-6', title: 'Whack-a-Mole', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-7', title: 'Snake', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-8', title: 'Asteroids', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-9', title: 'Pac-Man', subtitle: 'Coming Soon', available: false },
+      { id: 'coming-10', title: 'Tetris', subtitle: 'Coming Soon', available: false },
+    ];
+
+    // --- Procedural Flappy Bird thumbnail ---
+    function generateFlappyThumbnail(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      // Sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, height);
+      sky.addColorStop(0, '#4FC3F7');
+      sky.addColorStop(0.6, '#81D4FA');
+      sky.addColorStop(1, '#B3E5FC');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, width, height);
+
+      // Clouds
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      [[0.15, 0.18, 14], [0.55, 0.12, 10], [0.8, 0.25, 12]].forEach(([rx, ry, s]) => {
+        const cx = rx * width, cy = ry * height;
+        ctx.beginPath();
+        ctx.arc(cx, cy, s, 0, Math.PI * 2);
+        ctx.arc(cx + s * 0.8, cy - s * 0.2, s * 0.65, 0, Math.PI * 2);
+        ctx.arc(cx + s * 1.3, cy, s * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const groundY = height * 0.82;
+      const pipeW = 26;
+      const capH = 10;
+      const capOv = 3;
+      const gap = height * 0.28;
+
+      // Pipes
+      const pipes = [
+        { x: width * 0.3, gapCenter: height * 0.38 },
+        { x: width * 0.6, gapCenter: height * 0.52 },
+        { x: width * 0.88, gapCenter: height * 0.42 },
+      ];
+
+      for (const p of pipes) {
+        const topH = p.gapCenter - gap / 2;
+        const botY = p.gapCenter + gap / 2;
+
+        // Pipe body
+        const pg = ctx.createLinearGradient(p.x, 0, p.x + pipeW, 0);
+        pg.addColorStop(0, '#2ECC71');
+        pg.addColorStop(0.3, '#58D68D');
+        pg.addColorStop(0.7, '#2ECC71');
+        pg.addColorStop(1, '#1E8449');
+
+        ctx.fillStyle = pg;
+        ctx.fillRect(p.x, 0, pipeW, topH);
+        ctx.fillRect(p.x, botY, pipeW, groundY - botY);
+
+        // Pipe borders
+        ctx.strokeStyle = '#145A32';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(p.x, 0, pipeW, topH);
+        ctx.strokeRect(p.x, botY, pipeW, groundY - botY);
+
+        // Caps
+        const cg = ctx.createLinearGradient(p.x - capOv, 0, p.x + pipeW + capOv, 0);
+        cg.addColorStop(0, '#27AE60');
+        cg.addColorStop(0.3, '#6CDE96');
+        cg.addColorStop(0.7, '#27AE60');
+        cg.addColorStop(1, '#1A7A42');
+        ctx.fillStyle = cg;
+        ctx.fillRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
+        ctx.fillRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
+        ctx.strokeRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
+        ctx.strokeRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
+      }
+
+      // Ground
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(0, groundY, width, height - groundY);
+      ctx.fillStyle = '#4CAF50';
+      ctx.fillRect(0, groundY, width, 6);
+      ctx.fillStyle = '#66BB6A';
+      ctx.fillRect(0, groundY, width, 2);
+
+      // Bird
+      const bx = width * 0.22, by = height * 0.4;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(-0.15);
+
+      // Body
+      ctx.fillStyle = '#F7DC6F';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 12, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#B7950B';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Belly
+      ctx.fillStyle = '#FCF3CF';
+      ctx.beginPath();
+      ctx.ellipse(1, 2, 7, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Wing
+      ctx.fillStyle = '#D4AC0D';
+      ctx.beginPath();
+      ctx.ellipse(-3, -3, 6, 4, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(6, -3, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(7.5, -3, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak
+      ctx.fillStyle = '#E74C3C';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.lineTo(15, 1.5);
+      ctx.lineTo(9, 3.5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+
+      return c.toDataURL();
+    }
+
+    // --- Placeholder gradient thumbnails ---
+    function generatePlaceholderThumbnail(width, height, hue) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, `hsl(${hue}, 30%, 18%)`);
+      grad.addColorStop(1, `hsl(${hue + 30}, 25%, 12%)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle pattern dots
+      ctx.fillStyle = `hsla(${hue}, 40%, 40%, 0.08)`;
+      for (let y = 0; y < height; y += 16) {
+        for (let x = 0; x < width; x += 16) {
+          ctx.beginPath();
+          ctx.arc(x + 8, y + 8, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      return c.toDataURL();
+    }
+
+    // --- Build card DOM ---
+    const grid = document.getElementById('cardGrid');
+    const thumbW = 480;
+    const thumbH = 200;
+
+    const placeholderHues = [220, 260, 180, 300, 200, 340, 240, 280, 160];
+    let hueIdx = 0;
+
+    GAMES.forEach(game => {
+      const card = document.createElement('div');
+      card.className = `card ${game.available ? 'available' : 'coming-soon'}`;
+
+      // Thumbnail
+      const img = document.createElement('img');
+      img.className = 'card-thumbnail';
+      img.alt = game.title;
+      if (game.available && game.id === 'flappy-bird') {
+        img.src = generateFlappyThumbnail(thumbW, thumbH);
+      } else {
+        img.src = generatePlaceholderThumbnail(thumbW, thumbH, placeholderHues[hueIdx++] || 220);
+      }
+      card.appendChild(img);
+
+      // Info
+      const info = document.createElement('div');
+      info.className = 'card-info';
+      info.innerHTML = `
+        <div class="card-title">${game.title}</div>
+        <div class="card-subtitle">${game.subtitle}</div>
+      `;
+      card.appendChild(info);
+
+      // Coming soon badge
+      if (!game.available) {
+        const badge = document.createElement('div');
+        badge.className = 'coming-soon-badge';
+        badge.innerHTML = `
+          <div class="lock-icon">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+          </div>
+          <div class="coming-soon-text">Coming Soon</div>
+        `;
+        card.appendChild(badge);
+      }
+
+      // Click handler
+      if (game.available) {
+        card.addEventListener('click', () => {
+          window.location.href = game.path;
+        });
+      }
+
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>
