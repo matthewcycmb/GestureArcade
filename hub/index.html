@@ -587,7 +587,7 @@
   <script>
     // --- Settings persistence ---
     const SETTINGS_KEY = 'gesture-arcade-settings';
-    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird' };
+    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird', 'road-racer': 'Road Racer', 'fruit-ninja': 'Fruit Ninja', 'pong': 'Pong' };
 
     function getDefaultSettings() {
       return {
@@ -596,7 +596,7 @@
         camera: { deviceId: '' },
         tracking: { sensitivity: 'normal' },
         cooldownMs: 300,
-        highScores: { 'flappy-bird': 0 }
+        highScores: { 'flappy-bird': 0, 'road-racer': 0, 'fruit-ninja': 0, 'pong': 0 }
       };
     }
 
@@ -773,9 +773,9 @@
 
     const GAMES = [
       { id: 'flappy-bird', title: 'Flappy Bird', subtitle: 'Pinch to flap', path: '/games/flappy-bird/index.html', available: true },
-      { id: 'coming-2', title: 'Space Shooter', subtitle: 'Coming Soon', available: false },
-      { id: 'coming-3', title: 'Fruit Ninja', subtitle: 'Coming Soon', available: false },
-      { id: 'coming-4', title: 'Pong', subtitle: 'Coming Soon', available: false },
+      { id: 'road-racer', title: 'Road Racer', subtitle: 'Tilt to steer', path: '/games/road-racer/index.html', available: true },
+      { id: 'fruit-ninja', title: 'Fruit Ninja', subtitle: 'Swipe to slice', path: '/games/fruit-ninja/index.html', available: true },
+      { id: 'pong', title: 'Pong', subtitle: 'Hand tracks paddle', path: '/games/pong/index.html', available: true },
       { id: 'coming-5', title: 'Brick Breaker', subtitle: 'Coming Soon', available: false },
       { id: 'coming-6', title: 'Whack-a-Mole', subtitle: 'Coming Soon', available: false },
       { id: 'coming-7', title: 'Snake', subtitle: 'Coming Soon', available: false },
@@ -916,6 +916,229 @@
       return c.toDataURL();
     }
 
+    // --- Procedural Road Racer thumbnail ---
+    function generateRoadRacerThumbnail(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      // Night sky
+      const sky = ctx.createLinearGradient(0, 0, 0, height * 0.4);
+      sky.addColorStop(0, '#0a0a2e');
+      sky.addColorStop(1, '#1a1a4e');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, width, height);
+
+      // Stars
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      [[0.1, 0.08], [0.3, 0.15], [0.55, 0.05], [0.7, 0.12], [0.9, 0.08]].forEach(([rx, ry]) => {
+        ctx.beginPath();
+        ctx.arc(rx * width, ry * height, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Road (perspective trapezoid)
+      const vanishX = width / 2;
+      const vanishY = height * 0.25;
+      const roadBottomW = width * 0.7;
+      const roadTopW = width * 0.08;
+
+      // Grass
+      ctx.fillStyle = '#1a3a1a';
+      ctx.fillRect(0, vanishY, width, height - vanishY);
+
+      // Road surface
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.moveTo(vanishX - roadTopW / 2, vanishY);
+      ctx.lineTo(vanishX + roadTopW / 2, vanishY);
+      ctx.lineTo(vanishX + roadBottomW / 2, height);
+      ctx.lineTo(vanishX - roadBottomW / 2, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lane dashes
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 5; i++) {
+        const t = 0.2 + i * 0.16;
+        const lw = roadTopW + t * (roadBottomW - roadTopW);
+        const ly = vanishY + t * (height - vanishY);
+        const lx = vanishX - lw / 6;
+        const rx = vanishX + lw / 6;
+        if (i % 2 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(lx - 2, ly + 6);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(rx, ly);
+          ctx.lineTo(rx + 2, ly + 6);
+          ctx.stroke();
+        }
+      }
+
+      // Player car (red)
+      const carW = 20;
+      const carH = 32;
+      const carX = vanishX;
+      const carY = height * 0.85;
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.roundRect(carX - carW / 2, carY - carH, carW, carH, 4);
+      ctx.fill();
+      // Windshield
+      ctx.fillStyle = 'rgba(100,180,255,0.5)';
+      ctx.fillRect(carX - carW * 0.3, carY - carH * 0.85, carW * 0.6, carH * 0.2);
+      // Headlights
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(carX - 5, carY - carH + 3, 2, 0, Math.PI * 2);
+      ctx.arc(carX + 5, carY - carH + 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Enemy car (blue, in left lane)
+      const eCarW = 14;
+      const eCarH = 22;
+      const eX = vanishX - roadBottomW * 0.18;
+      const eY = height * 0.55;
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.roundRect(eX - eCarW / 2, eY - eCarH, eCarW, eCarH, 3);
+      ctx.fill();
+
+      return c.toDataURL();
+    }
+
+    // --- Procedural Fruit Ninja thumbnail ---
+    function generateFruitNinjaThumbnail(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      // Dark wood background
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, '#1a0e08');
+      bg.addColorStop(0.5, '#2a1a10');
+      bg.addColorStop(1, '#0f0804');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Wood grain
+      ctx.strokeStyle = 'rgba(255, 200, 150, 0.04)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < height; y += 10) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + Math.sin(y * 0.05) * 2);
+        ctx.lineTo(width, y + Math.cos(y * 0.05) * 2);
+        ctx.stroke();
+      }
+
+      // Slice trail
+      ctx.strokeStyle = 'rgba(200, 230, 255, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(width * 0.15, height * 0.8);
+      ctx.quadraticCurveTo(width * 0.4, height * 0.2, width * 0.85, height * 0.6);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Fruits
+      const fruits = [
+        { x: 0.25, y: 0.4, r: 18, color: '#2E7D32' },  // watermelon
+        { x: 0.5, y: 0.3, r: 14, color: '#FF9800' },    // orange
+        { x: 0.7, y: 0.5, r: 13, color: '#D32F2F' },    // apple
+        { x: 0.4, y: 0.65, r: 11, color: '#C62828' },   // strawberry
+      ];
+      for (const f of fruits) {
+        ctx.beginPath();
+        ctx.arc(f.x * width, f.y * height, f.r, 0, Math.PI * 2);
+        ctx.fillStyle = f.color;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(f.x * width - 3, f.y * height - 3, f.r * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fill();
+      }
+
+      // Half fruit (sliced effect)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0.6 * width, 0.38 * height, 12, 0, Math.PI);
+      ctx.closePath();
+      ctx.fillStyle = '#FFE0B2';
+      ctx.fill();
+      ctx.restore();
+
+      return c.toDataURL();
+    }
+
+    // --- Procedural Pong thumbnail ---
+    function generatePongThumbnail(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      // Dark background
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, '#0a0a0a');
+      bg.addColorStop(1, '#1a1a1a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Center dashed line
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(width / 2, 0);
+      ctx.lineTo(width / 2, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Left paddle
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(255,255,255,0.3)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.roundRect(width * 0.08, height * 0.3, 8, height * 0.3, 3);
+      ctx.fill();
+
+      // Right paddle
+      ctx.beginPath();
+      ctx.roundRect(width * 0.92 - 8, height * 0.45, 8, height * 0.3, 3);
+      ctx.fill();
+
+      // Ball
+      ctx.beginPath();
+      ctx.arc(width * 0.42, height * 0.45, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Motion trail
+      ctx.shadowBlur = 0;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(width * 0.42 + (i + 1) * 12, height * 0.45 + (i + 1) * 3, 6 * (1 - (i + 1) * 0.18), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${0.15 - i * 0.03})`;
+        ctx.fill();
+      }
+
+      // Score numbers
+      ctx.font = 'bold 36px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillText('3', width * 0.3, height * 0.35);
+      ctx.fillText('5', width * 0.7, height * 0.35);
+
+      return c.toDataURL();
+    }
+
     // --- Placeholder gradient thumbnails ---
     function generatePlaceholderThumbnail(width, height, hue) {
       const c = document.createElement('canvas');
@@ -960,6 +1183,12 @@
       img.alt = game.title;
       if (game.available && game.id === 'flappy-bird') {
         img.src = generateFlappyThumbnail(thumbW, thumbH);
+      } else if (game.available && game.id === 'road-racer') {
+        img.src = generateRoadRacerThumbnail(thumbW, thumbH);
+      } else if (game.available && game.id === 'fruit-ninja') {
+        img.src = generateFruitNinjaThumbnail(thumbW, thumbH);
+      } else if (game.available && game.id === 'pong') {
+        img.src = generatePongThumbnail(thumbW, thumbH);
       } else {
         img.src = generatePlaceholderThumbnail(thumbW, thumbH, placeholderHues[hueIdx++] || 220);
       }

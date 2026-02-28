@@ -309,3 +309,20 @@ init();
 - **Audio**: Procedural Web Audio API (flap, score, hit — no external files)
 - **PiP**: 160x120 bottom-right, mirrored webcam + hand skeleton, "LIVE" badge
 - **Test**: `games/flappy-bird/test.js` — bird physics, pipes, collision, pinch hysteresis, state machine
+
+### Pong
+- **Files**: `games/pong/` — `index.html`, `game.js`, `paddle.js`, `ball.js`, `ai.js`, `collision.js`, `audio.js`, `renderer.js`, `test.js`
+- **Resolution**: 960x540 (16:9 landscape), scales to fit viewport
+- **Modes**: 1P vs AI, 2P local (two hands on same webcam)
+- **Control**: Hand Y position (wrist landmark) maps to paddle position via frame landmarks
+  - 1P: any detected hand controls left paddle, AI controls right
+  - 2P: MediaPipe handedness — `'Left'` hand = left paddle, `'Right'` hand = right paddle
+  - Lerp smoothing (`0.2 * dt`) for jitter-free movement
+- **Fallback**: W/S or Up/Down (1P), W/S + Up/Down (2P), 1/2/Enter for menu, Space for start/restart
+- **States**: `MENU → READY → PLAYING → GAME_OVER → MENU`
+- **Physics**: Ball base speed 5px/frame, random ±45° serve, bounce angle from paddle hit offset (±60°), speed +3% per hit (max 2.5x), delta-time
+- **Scoring**: First to 7 wins, 1.5s serve countdown between points
+- **AI**: Predicts ball Y at paddle X with wall bounces, 150ms reaction delay, ±25px error margin, lerp 0.12/frame, drifts to center when idle
+- **Audio**: Procedural Web Audio API (paddle hit, wall bounce, score, game over — no external files)
+- **PiP**: 160x120 bottom-right, mirrored webcam + hand skeleton, "LIVE" badge, color-coded hands in 2P mode (green=left, blue=right)
+- **Test**: `games/pong/test.js` — paddle physics, ball physics, AI behavior, collision detection, state machine
