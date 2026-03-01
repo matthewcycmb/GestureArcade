@@ -94,15 +94,43 @@ Gesture detectors are pure functions tested with synthetic landmark fixtures. Ge
 Tracking stability comes primarily from **MediaPipe configuration, NOT external smoothing filters**.
 The HandTracker is configured to match the proven FlappyFingers project:
 
-- **GPU delegate** (`delegate: 'GPU'`) — faster inference, more consistent results
+- **GPU delegate** (`delegate: 'GPU'`) with **automatic CPU fallback** — GPU is preferred for speed, but silently falls back to CPU on mobile devices where GPU delegate fails
 - **Pinned MediaPipe v0.10.18** — avoid regressions from `@latest`
 - **Confidence thresholds** — `detection: 0.7`, `tracking: 0.5`, `presence: 0.5`
 - **Single hand default** (`numHands: 1`) — halves detector workload
+- **Flexible camera constraints** — uses `{ ideal: 640 }` / `{ ideal: 480 }` instead of exact values, so mobile cameras use their native resolution without scaling artifacts
 
 The LandmarkSmoother (One Euro Filter) is a **light** final pass for sub-pixel jitter only.
 DO NOT set aggressive smoothing values (low minCutoff, low beta) — this adds visible
 lag/delay. Current values (`minCutoff: 3.0`, `beta: 5.0`) are intentionally light.
 If tracking feels laggy, the fix is NEVER more smoothing — check MediaPipe config first.
+
+## Mobile Compatibility
+
+Mobile devices have different tracking characteristics than desktop. Key lessons learned:
+
+### Distance-based thresholds must scale by hand size
+On mobile, users hold the phone closer, so their hand fills more of the camera frame.
+Fixed normalized-distance thresholds (e.g. pinch at `< 0.06`) become unreliable because
+the same physical gesture produces larger normalized distances when the hand is closer.
+**Fix**: Scale thresholds by palm width (distance from index MCP to pinky MCP, landmarks 5→17)
+relative to a reference palm width (`0.18` at arm's length). See Flappy Bird `checkPinch()`.
+
+### Use elapsed time, not frame counts, for timeouts
+Mobile devices often run at 30fps instead of 60fps. Frame-counting timers (e.g.
+`MAX_PINCH_FRAMES = 30` intended for ~500ms) take twice as long on mobile.
+**Fix**: Use `performance.now()` for all duration-based logic. See Flappy Bird `MAX_PINCH_MS`.
+
+### Coordinate-based tracking works fine across devices
+Gestures that track position (wrist Y for Pong paddles, index tip X for Road Racer steering,
+palm velocity for Fruit Ninja slicing) use normalized `[0,1]` coordinates which naturally
+adapt to any camera resolution and hand distance. These do NOT need scaling fixes.
+
+### Every game MUST have touch fallbacks
+Webcam gesture tracking may fail on mobile (permission denied, thermal throttling, poor
+lighting). Every game must include `touchstart`/`touchmove`/`touchend` event listeners
+on the canvas as a fallback input method. Use `{ passive: false }` and `e.preventDefault()`
+to prevent scroll/zoom interference.
 
 ## Threshold Tuning
 
@@ -275,6 +303,9 @@ init();
 - Run at 60fps using `requestAnimationFrame`
 - Handle no hand detected gracefully (pause or ignore, never crash)
 - Use delta-time for physics: `const dt = Math.min((timestamp - lastTimestamp) / (1000/60), 1.5)`
+- Include **touch event fallbacks** (`touchstart`/`touchmove`/`touchend` with `{ passive: false }`) for all state transitions and gameplay controls — mobile users may not have reliable webcam tracking
+- If using distance-based gesture thresholds, **scale by hand size** (palm width) for mobile compatibility
+- Use **elapsed time** (`performance.now()`) not frame counts for any duration-based logic
 
 ### Every game MUST include a test file: `games/[game-name]/test.js`
 
@@ -300,11 +331,12 @@ init();
 - **Files**: `games/flappy-bird/` — `index.html`, `game.js`, `bird.js`, `pipes.js`, `collision.js`, `audio.js`, `renderer.js`, `test.js`
 - **Resolution**: 480x640 (3:4 portrait), scales to fit viewport
 - **Control**: Pinch (thumb+index) to flap — uses frame landmarks with hysteresis, NOT PINCH events
-  - Trigger at thumb-index distance `< 0.06`, release at `> 0.10`
-  - Auto-release after 30 frames (~500ms) to prevent stuck state
+  - Base thresholds: trigger at `< 0.06`, release at `> 0.10` — scaled dynamically by palm width
+  - Palm width scaling: `palmWidth(hand) / 0.18` — adapts to hand distance from camera (critical for mobile)
+  - Auto-release after 500ms (`performance.now()` based, not frame-counting) to prevent stuck state
   - Resets on hand loss so next detection starts clean
   - One flap per pinch-release cycle (same feel as FlappyFingers)
-- **Fallback**: Space bar or mouse click
+- **Fallback**: Space bar, mouse click, or touch tap
 - **States**: `MENU → READY → PLAYING → GAME_OVER → READY`
 - **Physics**: gravity 0.5/frame², flap -8, pipe speed 3px/frame, gap 150px (initial)
 - **Difficulty**: Every 10 points: speed *1.05, gap -2px (min 120px)
@@ -320,7 +352,7 @@ init();
   - 1P: any detected hand controls left paddle, AI controls right
   - 2P: MediaPipe handedness — `'Left'` hand = left paddle, `'Right'` hand = right paddle
   - Lerp smoothing (`0.2 * dt`) for jitter-free movement
-- **Fallback**: W/S or Up/Down (1P), W/S + Up/Down (2P), 1/2/Enter for menu, Space for start/restart
+- **Fallback**: W/S or Up/Down (1P), W/S + Up/Down (2P), 1/2/Enter for menu, Space for start/restart, touch for mobile menu/state transitions
 - **States**: `MENU → READY → PLAYING → GAME_OVER → MENU`
 - **Physics**: Ball base speed 5px/frame, random ±45° serve, bounce angle from paddle hit offset (±60°), speed +3% per hit (max 2.5x), delta-time
 - **Scoring**: First to 7 wins, 1.5s serve countdown between points
