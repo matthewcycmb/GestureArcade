@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm -w @gesture-arcade/engine run build",
+    "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
