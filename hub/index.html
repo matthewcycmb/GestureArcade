@@ -591,7 +591,7 @@
 
     function getDefaultSettings() {
       return {
-        displayName: 'Matthew',
+        displayName: 'Player',
         sound: { volume: 80, muted: false },
         camera: { deviceId: '' },
         tracking: { sensitivity: 'normal' },
@@ -677,17 +677,30 @@
 
     function renderScores() {
       const container = document.getElementById('scoresContainer');
+      container.textContent = '';
       const entries = Object.entries(settings.highScores).filter(([, v]) => v > 0);
       if (entries.length === 0) {
-        container.innerHTML = '<p class="no-scores">No high scores yet. Play a game!</p>';
+        const p = document.createElement('p');
+        p.className = 'no-scores';
+        p.textContent = 'No high scores yet. Play a game!';
+        container.appendChild(p);
         return;
       }
-      let html = '<ul class="scores-list">';
+      const ul = document.createElement('ul');
+      ul.className = 'scores-list';
       for (const [id, score] of entries) {
-        html += `<li><span class="game-name">${GAME_NAMES[id] || id}</span><span class="score-val">${score}</span></li>`;
+        const li = document.createElement('li');
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'game-name';
+        nameSpan.textContent = GAME_NAMES[id] || id;
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'score-val';
+        scoreSpan.textContent = String(Number(score) || 0);
+        li.appendChild(nameSpan);
+        li.appendChild(scoreSpan);
+        ul.appendChild(li);
       }
-      html += '</ul>';
-      container.innerHTML = html;
+      container.appendChild(ul);
     }
 
     // --- Settings modal ---
