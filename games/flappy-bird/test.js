@@ -162,9 +162,11 @@ describe('Pinch Hysteresis', () => {
   // Simulate the pinch detection logic from game.js
   function createPinchDetector() {
     let isPinched = false;
+    let pinchFrames = 0;
     let flapCount = 0;
-    const PINCH_THRESHOLD = 0.05;
-    const RELEASE_THRESHOLD = 0.07;
+    const PINCH_THRESHOLD = 0.06;
+    const RELEASE_THRESHOLD = 0.10;
+    const MAX_PINCH_FRAMES = 30;
 
     return {
       check(thumbTip, indexTip) {
@@ -172,12 +174,22 @@ describe('Pinch Hysteresis', () => {
         const dy = thumbTip.y - indexTip.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!isPinched && dist < PINCH_THRESHOLD) {
+        if (isPinched) {
+          pinchFrames++;
+          if (dist > RELEASE_THRESHOLD || pinchFrames >= MAX_PINCH_FRAMES) {
+            isPinched = false;
+            pinchFrames = 0;
+          }
+        } else if (dist < PINCH_THRESHOLD) {
           isPinched = true;
+          pinchFrames = 0;
           flapCount++;
-        } else if (isPinched && dist > RELEASE_THRESHOLD) {
-          isPinched = false;
         }
+      },
+      checkEmpty() {
+        // Simulate hand lost (no landmarks)
+        isPinched = false;
+        pinchFrames = 0;
       },
       get flapCount() { return flapCount; },
       get isPinched() { return isPinched; },
@@ -186,7 +198,7 @@ describe('Pinch Hysteresis', () => {
 
   it('triggers flap on pinch close', () => {
     const det = createPinchDetector();
-    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // dist ~0.02 < 0.05
+    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // dist ~0.02 < 0.06
     expect(det.flapCount).toBe(1);
     expect(det.isPinched).toBe(true);
   });
@@ -201,16 +213,41 @@ describe('Pinch Hysteresis', () => {
   it('triggers again after release cycle', () => {
     const det = createPinchDetector();
     det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch → flap 1
-    det.check(lm(0.5, 0.5), lm(0.6, 0.5));  // release (dist 0.1 > 0.07)
+    det.check(lm(0.5, 0.5), lm(0.62, 0.5));  // release (dist 0.12 > 0.10)
     det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch again → flap 2
     expect(det.flapCount).toBe(2);
   });
 
   it('does not trigger if distance is between thresholds (hysteresis zone)', () => {
     const det = createPinchDetector();
-    // dist ~0.06 is between 0.05 and 0.07, should NOT trigger
-    det.check(lm(0.5, 0.5), lm(0.56, 0.5));
+    // dist ~0.08 is between 0.06 and 0.10, should NOT trigger
+    det.check(lm(0.5, 0.5), lm(0.58, 0.5));
     expect(det.flapCount).toBe(0);
+  });
+
+  it('resets pinch state when hand is lost', () => {
+    const det = createPinchDetector();
+    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch → flap 1
+    expect(det.isPinched).toBe(true);
+    det.checkEmpty(); // hand lost
+    expect(det.isPinched).toBe(false);
+    // Can pinch again immediately when hand returns
+    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch → flap 2
+    expect(det.flapCount).toBe(2);
+  });
+
+  it('auto-releases after max pinch duration', () => {
+    const det = createPinchDetector();
+    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch → flap 1
+    expect(det.isPinched).toBe(true);
+    // Simulate holding pinch for 30 frames
+    for (let i = 0; i < 30; i++) {
+      det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // still close
+    }
+    expect(det.isPinched).toBe(false); // auto-released
+    // Can pinch again
+    det.check(lm(0.5, 0.5), lm(0.52, 0.5)); // pinch → flap 2
+    expect(det.flapCount).toBe(2);
   });
 });
 

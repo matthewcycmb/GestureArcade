@@ -60,9 +60,11 @@ let lastTimestamp = 0;
 let gameOverCooldown = 0; // frames before restart allowed
 
 // --- Pinch detection via frame landmarks with hysteresis ---
-const PINCH_THRESHOLD = 0.05;
-const RELEASE_THRESHOLD = 0.07;
+const PINCH_THRESHOLD = 0.06;
+const RELEASE_THRESHOLD = 0.10;
+const MAX_PINCH_FRAMES = 30; // auto-release after ~500ms to prevent stuck state
 let isPinched = false;
+let pinchFrames = 0;
 let landmarks = []; // current frame landmarks (array of arrays)
 
 function distance2D(a, b) {
@@ -72,7 +74,12 @@ function distance2D(a, b) {
 }
 
 function checkPinch(lms) {
-  if (!lms || lms.length === 0) return;
+  if (!lms || lms.length === 0) {
+    // Hand lost — reset pinch state so next detection starts clean
+    isPinched = false;
+    pinchFrames = 0;
+    return;
+  }
 
   // Use first hand
   const hand = lms[0];
@@ -82,11 +89,16 @@ function checkPinch(lms) {
   const indexTip = hand[8];
   const dist = distance2D(thumbTip, indexTip);
 
-  if (!isPinched && dist < PINCH_THRESHOLD) {
+  if (isPinched) {
+    pinchFrames++;
+    if (dist > RELEASE_THRESHOLD || pinchFrames >= MAX_PINCH_FRAMES) {
+      isPinched = false;
+      pinchFrames = 0;
+    }
+  } else if (dist < PINCH_THRESHOLD) {
     isPinched = true;
+    pinchFrames = 0;
     onFlap();
-  } else if (isPinched && dist > RELEASE_THRESHOLD) {
-    isPinched = false;
   }
 }
 

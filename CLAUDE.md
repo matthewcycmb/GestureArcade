@@ -300,7 +300,9 @@ init();
 - **Files**: `games/flappy-bird/` — `index.html`, `game.js`, `bird.js`, `pipes.js`, `collision.js`, `audio.js`, `renderer.js`, `test.js`
 - **Resolution**: 480x640 (3:4 portrait), scales to fit viewport
 - **Control**: Pinch (thumb+index) to flap — uses frame landmarks with hysteresis, NOT PINCH events
-  - Trigger at thumb-index distance `< 0.05`, release at `> 0.07`
+  - Trigger at thumb-index distance `< 0.06`, release at `> 0.10`
+  - Auto-release after 30 frames (~500ms) to prevent stuck state
+  - Resets on hand loss so next detection starts clean
   - One flap per pinch-release cycle (same feel as FlappyFingers)
 - **Fallback**: Space bar or mouse click
 - **States**: `MENU → READY → PLAYING → GAME_OVER → READY`
