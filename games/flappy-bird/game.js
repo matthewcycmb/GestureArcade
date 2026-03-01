@@ -107,6 +107,24 @@ function drawPiP(videoEl) {
   const x = canvas.width - PIP.width - PIP.margin;
   const y = canvas.height - PIP.height - PIP.margin - 60; // above ground
 
+  // Cover-crop: preserve video aspect ratio instead of stretching
+  const vw = videoEl.videoWidth || 640;
+  const vh = videoEl.videoHeight || 480;
+  const videoAR = vw / vh;
+  const pipAR = PIP.width / PIP.height;
+  let sx, sy, sw, sh;
+  if (videoAR > pipAR) {
+    // Video wider than PiP — crop sides
+    sh = vh; sw = vh * pipAR;
+    sx = (vw - sw) / 2; sy = 0;
+  } else {
+    // Video taller than PiP — crop top/bottom
+    sw = vw; sh = vw / pipAR;
+    sx = 0; sy = (vh - sh) / 2;
+  }
+  const cropX = sx / vw, cropY = sy / vh;
+  const cropW = sw / vw, cropH = sh / vh;
+
   ctx.save();
 
   // Rounded clip
@@ -117,10 +135,10 @@ function drawPiP(videoEl) {
   // Mirror video
   ctx.translate(x + PIP.width, y);
   ctx.scale(-1, 1);
-  ctx.drawImage(videoEl, 0, 0, PIP.width, PIP.height);
+  ctx.drawImage(videoEl, sx, sy, sw, sh, 0, 0, PIP.width, PIP.height);
   ctx.restore();
 
-  // Draw landmarks on top
+  // Draw landmarks remapped to cropped view
   ctx.save();
   ctx.translate(x, y);
   for (const lms of landmarks) {
@@ -129,14 +147,14 @@ function drawPiP(videoEl) {
     ctx.lineWidth = 2;
     for (const [a, b] of HAND_CONNECTIONS) {
       ctx.beginPath();
-      ctx.moveTo((1 - lms[a].x) * PIP.width, lms[a].y * PIP.height);
-      ctx.lineTo((1 - lms[b].x) * PIP.width, lms[b].y * PIP.height);
+      ctx.moveTo((1 - (lms[a].x - cropX) / cropW) * PIP.width, ((lms[a].y - cropY) / cropH) * PIP.height);
+      ctx.lineTo((1 - (lms[b].x - cropX) / cropW) * PIP.width, ((lms[b].y - cropY) / cropH) * PIP.height);
       ctx.stroke();
     }
     // Joints
     for (let i = 0; i < lms.length; i++) {
       ctx.beginPath();
-      ctx.arc((1 - lms[i].x) * PIP.width, lms[i].y * PIP.height, 3, 0, Math.PI * 2);
+      ctx.arc((1 - (lms[i].x - cropX) / cropW) * PIP.width, ((lms[i].y - cropY) / cropH) * PIP.height, 3, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       ctx.fill();
     }
