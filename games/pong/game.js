@@ -271,6 +271,27 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
+// --- Touch input (mobile) ---
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const { x, y } = screenToGame(touch.clientX, touch.clientY);
+
+  if (state === 'MENU') {
+    const zone = hitTestMenuZone(x, y);
+    if (zone) {
+      mode = zone;
+      state = 'READY';
+      resetGame();
+    }
+  } else if (state === 'READY') {
+    state = 'PLAYING';
+    startServe();
+  } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
+    state = 'MENU';
+  }
+}, { passive: false });
+
 canvas.style.cursor = 'pointer';
 
 // --- Keyboard input ---

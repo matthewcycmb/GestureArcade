@@ -60,11 +60,13 @@ let lastTimestamp = 0;
 let gameOverCooldown = 0; // frames before restart allowed
 
 // --- Pinch detection via frame landmarks with hysteresis ---
-const PINCH_THRESHOLD = 0.06;
-const RELEASE_THRESHOLD = 0.10;
-const MAX_PINCH_FRAMES = 30; // auto-release after ~500ms to prevent stuck state
+// Base thresholds (scaled dynamically by hand size)
+const BASE_PINCH_THRESHOLD = 0.06;
+const BASE_RELEASE_THRESHOLD = 0.10;
+const BASE_PALM_WIDTH = 0.18; // reference palm width at ~arm's length on desktop
+const MAX_PINCH_MS = 500; // auto-release after 500ms (time-based, not frame-based)
 let isPinched = false;
-let pinchFrames = 0;
+let pinchStartTime = 0;
 let landmarks = []; // current frame landmarks (array of arrays)
 
 function distance2D(a, b) {
@@ -73,11 +75,16 @@ function distance2D(a, b) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+function palmWidth(hand) {
+  // Distance from index MCP (5) to pinky MCP (17) — stable measure of hand size
+  return distance2D(hand[5], hand[17]);
+}
+
 function checkPinch(lms) {
   if (!lms || lms.length === 0) {
     // Hand lost — reset pinch state so next detection starts clean
     isPinched = false;
-    pinchFrames = 0;
+    pinchStartTime = 0;
     return;
   }
 
@@ -89,15 +96,21 @@ function checkPinch(lms) {
   const indexTip = hand[8];
   const dist = distance2D(thumbTip, indexTip);
 
+  // Scale thresholds by hand size relative to reference palm width
+  // On mobile (hand closer), palm appears larger → thresholds scale up proportionally
+  const scale = palmWidth(hand) / BASE_PALM_WIDTH;
+  const pinchThreshold = BASE_PINCH_THRESHOLD * scale;
+  const releaseThreshold = BASE_RELEASE_THRESHOLD * scale;
+
   if (isPinched) {
-    pinchFrames++;
-    if (dist > RELEASE_THRESHOLD || pinchFrames >= MAX_PINCH_FRAMES) {
+    const elapsed = performance.now() - pinchStartTime;
+    if (dist > releaseThreshold || elapsed >= MAX_PINCH_MS) {
       isPinched = false;
-      pinchFrames = 0;
+      pinchStartTime = 0;
     }
-  } else if (dist < PINCH_THRESHOLD) {
+  } else if (dist < pinchThreshold) {
     isPinched = true;
-    pinchFrames = 0;
+    pinchStartTime = performance.now();
     onFlap();
   }
 }
@@ -226,6 +239,10 @@ window.addEventListener('keydown', (e) => {
   }
 });
 canvas.addEventListener('click', () => onFlap());
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  onFlap();
+}, { passive: false });
 
 // --- GestureEngine setup ---
 const engine = new GestureEngine();
