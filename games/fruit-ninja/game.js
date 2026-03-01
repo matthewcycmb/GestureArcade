@@ -220,6 +220,43 @@ canvas.addEventListener('mouseup', () => {
   mousePrev = null;
 });
 
+// --- Touch fallback (mobile) ---
+let touchPrev = null;
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (state === 'MENU' || state === 'READY' || (state === 'GAME_OVER' && gameOverCooldown <= 0)) {
+    onOpenPalm();
+    return;
+  }
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = GAME_WIDTH / rect.width;
+  const scaleY = GAME_HEIGHT / rect.height;
+  touchPrev = { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY };
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (state !== 'PLAYING') return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = GAME_WIDTH / rect.width;
+  const scaleY = GAME_HEIGHT / rect.height;
+  const tx = (touch.clientX - rect.left) * scaleX;
+  const ty = (touch.clientY - rect.top) * scaleY;
+
+  if (touchPrev) {
+    const segment = { x1: touchPrev.x, y1: touchPrev.y, x2: tx, y2: ty };
+    processSlice(segment, performance.now());
+  }
+  touchPrev = { x: tx, y: ty };
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  touchPrev = null;
+});
+
 // --- Slice processing ---
 function processSlice(segment, now) {
   let slicedThisFrame = 0;

@@ -545,6 +545,26 @@ window.addEventListener('keyup', (e) => {
   keysDown.delete(e.code);
 });
 
+// --- Touch input (mobile) ---
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  onStart();
+}, { passive: false });
+
+// Touch steering — track finger X position as steering target
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (state !== 'PLAYING') return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const normX = (touch.clientX - rect.left) / rect.width;
+  targetX = pointXToRoadX(normX);
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+  targetX = null;
+});
+
 // ============================================================
 // GESTURE ENGINE
 // ============================================================
