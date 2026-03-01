@@ -18,9 +18,17 @@ import {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Game resolution (portrait, same as FlappyFingers)
+// Game resolution — width fixed, height adapts to fill tall (portrait) screens
 const GAME_WIDTH = 480;
-const GAME_HEIGHT = 640;
+const BASE_HEIGHT = 640;
+
+// On tall screens (mobile portrait), extend game height to fill the viewport
+// so there's no black bar. On landscape/desktop, use the base 640.
+const viewportAspect = window.innerWidth / window.innerHeight;
+const baseAspect = GAME_WIDTH / BASE_HEIGHT;
+const GAME_HEIGHT = viewportAspect < baseAspect
+  ? Math.round(GAME_WIDTH / viewportAspect)
+  : BASE_HEIGHT;
 const GROUND_Y = getGroundY(GAME_HEIGHT);
 
 canvas.width = GAME_WIDTH;
