@@ -107,8 +107,12 @@ function getHandColor(index) {
 function drawPiP(videoEl) {
   if (!videoEl || videoEl.readyState < 2) return;
 
-  const x = canvas.width - PIP.width - PIP.margin;
-  const y = canvas.height - PIP.height - PIP.margin;
+  const x = mode === '2P'
+    ? (canvas.width - PIP.width) / 2
+    : canvas.width - PIP.width - PIP.margin;
+  const y = mode === '2P'
+    ? PIP.margin
+    : canvas.height - PIP.height - PIP.margin;
 
   // Cover-crop: preserve video aspect ratio instead of stretching
   const vw = videoEl.videoWidth || 640;
