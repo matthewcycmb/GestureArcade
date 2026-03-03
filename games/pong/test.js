@@ -230,7 +230,7 @@ describe('State Machine', () => {
     let leftScore = 0;
     let rightScore = 0;
     let gameOverCooldown = 0;
-    const WIN_SCORE = 7;
+    const WIN_SCORE = 3;
 
     return {
       get state() { return state; },
@@ -250,7 +250,9 @@ describe('State Machine', () => {
         if (state === 'READY') {
           state = 'PLAYING';
         } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
-          state = 'MENU';
+          leftScore = 0;
+          rightScore = 0;
+          state = 'PLAYING';
         }
       },
       scorePoint(scorer) {
@@ -290,28 +292,30 @@ describe('State Machine', () => {
     expect(sm.rightScore).toBe(1);
   });
 
-  it('game over at 7 points', () => {
+  it('game over at 3 points', () => {
     const sm = createStateMachine();
     sm.state = 'PLAYING';
-    for (let i = 0; i < 7; i++) sm.scorePoint('left');
+    for (let i = 0; i < 3; i++) sm.scorePoint('left');
     expect(sm.state).toBe('GAME_OVER');
-    expect(sm.leftScore).toBe(7);
+    expect(sm.leftScore).toBe(3);
   });
 
   it('cannot restart during cooldown', () => {
     const sm = createStateMachine();
     sm.state = 'PLAYING';
-    for (let i = 0; i < 7; i++) sm.scorePoint('left');
+    for (let i = 0; i < 3; i++) sm.scorePoint('left');
     sm.onOpenPalm();
     expect(sm.state).toBe('GAME_OVER'); // still locked
   });
 
-  it('restart after cooldown returns to MENU', () => {
+  it('restart after cooldown resets scores and starts new game', () => {
     const sm = createStateMachine();
     sm.state = 'PLAYING';
-    for (let i = 0; i < 7; i++) sm.scorePoint('left');
+    for (let i = 0; i < 3; i++) sm.scorePoint('left');
     sm.tickCooldown(31);
     sm.onOpenPalm();
-    expect(sm.state).toBe('MENU');
+    expect(sm.state).toBe('PLAYING');
+    expect(sm.leftScore).toBe(0);
+    expect(sm.rightScore).toBe(0);
   });
 });

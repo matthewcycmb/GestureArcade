@@ -31,14 +31,55 @@ export function drawCourt(ctx, w, h) {
   ctx.setLineDash([]);
 }
 
-export function drawScores(ctx, leftScore, rightScore, w) {
+const SCORE_POP_DURATION = 300; // ms
+
+export function drawScores(ctx, leftScore, rightScore, w, h, scorePopSide, scorePopElapsed) {
+  const baseY = 20;
+
+  // Draw each score, with pop animation on the scoring side
+  for (const side of ['left', 'right']) {
+    const score = side === 'left' ? leftScore : rightScore;
+    const x = side === 'left' ? w * 0.25 : w * 0.75;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const isPopping = scorePopSide === side && scorePopElapsed < SCORE_POP_DURATION;
+    if (isPopping) {
+      // Ease-out: scale up quickly then settle back
+      const t = scorePopElapsed / SCORE_POP_DURATION;
+      const scale = 1 + 0.3 * (1 - t) * (1 - t); // peaks at 1.3, eases to 1.0
+      const alpha = 0.85 + 0.15 * (1 - t); // briefly full white
+      ctx.translate(x, baseY + 80); // anchor at vertical center of digit
+      ctx.scale(scale, scale);
+      ctx.translate(-x, -(baseY + 80));
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    }
+
+    ctx.font = 'bold 160px monospace';
+    ctx.fillText(score, x, baseY);
+    ctx.restore();
+  }
+}
+
+const HIT_FLASH_DURATION = 120; // ms
+
+export function drawHitFlash(ctx, w, h, hitFlashSide, hitFlashElapsed) {
+  if (!hitFlashSide || hitFlashElapsed >= HIT_FLASH_DURATION) return;
+
+  const t = hitFlashElapsed / HIT_FLASH_DURATION;
+  const alpha = 0.15 * (1 - t) * (1 - t); // quick fade-out
+
   ctx.save();
-  ctx.font = '72px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.fillText(leftScore, w * 0.25, 30);
-  ctx.fillText(rightScore, w * 0.75, 30);
+  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+  if (hitFlashSide === 'left') {
+    ctx.fillRect(0, 0, w / 2, h);
+  } else {
+    ctx.fillRect(w / 2, 0, w / 2, h);
+  }
   ctx.restore();
 }
 
@@ -143,7 +184,7 @@ export function drawReadyScreen(ctx, w, h, timestamp, mode) {
 
   ctx.font = '16px sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.fillText('First to 7 wins!', w / 2, h * 0.6);
+  ctx.fillText('First to 3 wins!', w / 2, h * 0.6);
 
   const alpha = 0.5 + 0.5 * Math.sin(timestamp / 400);
   ctx.font = '20px sans-serif';
@@ -169,34 +210,29 @@ export function drawCountdown(ctx, w, h, count) {
 
 export function drawGameOverScreen(ctx, w, h, timestamp, leftScore, rightScore, mode, canRestart) {
   // Dim overlay
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
   ctx.fillRect(0, 0, w, h);
 
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // "Game Over"
-  ctx.font = 'bold 48px monospace';
-  ctx.fillStyle = '#E74C3C';
-  ctx.fillText('GAME OVER', w / 2, h * 0.25);
-
-  // Winner
-  ctx.font = 'bold 28px sans-serif';
-  ctx.fillStyle = '#fff';
+  // Large victory message
   let winnerText;
   if (mode === '1P') {
-    winnerText = leftScore >= 7 ? 'You Win!' : 'AI Wins!';
+    winnerText = leftScore >= 3 ? 'YOU WIN!' : 'AI WINS!';
   } else {
-    winnerText = leftScore >= 7 ? 'Left Player Wins!' : 'Right Player Wins!';
+    winnerText = leftScore >= 3 ? 'PLAYER 1 WINS!' : 'PLAYER 2 WINS!';
   }
-  ctx.fillText(winnerText, w / 2, h * 0.38);
+  ctx.font = 'bold 72px monospace';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(winnerText, w / 2, h * 0.3);
 
   // Score panel
   const panelW = 220;
   const panelH = 80;
   const panelX = (w - panelW) / 2;
-  const panelY = h * 0.48;
+  const panelY = h * 0.45;
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
   ctx.beginPath();
@@ -210,16 +246,29 @@ export function drawGameOverScreen(ctx, w, h, timestamp, leftScore, rightScore, 
   ctx.fillStyle = '#fff';
   ctx.fillText(`${leftScore}  -  ${rightScore}`, w / 2, panelY + panelH / 2);
 
-  // Restart instruction
+  // Play Again button
   if (canRestart) {
-    const alpha = 0.5 + 0.5 * Math.sin(timestamp / 500);
-    ctx.font = '20px sans-serif';
-    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-    ctx.fillText('Show OPEN PALM to play again', w / 2, h * 0.74);
+    const btnW = 240;
+    const btnH = 50;
+    const btnX = (w - btnW) / 2;
+    const btnY = h * 0.68;
+
+    const pulse = 0.8 + 0.2 * Math.sin(timestamp / 400);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.12 * pulse})`;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnW, btnH, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 22px monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('PLAY AGAIN', w / 2, btnY + btnH / 2);
 
     ctx.font = '14px sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fillText('or press Space', w / 2, h * 0.74 + 28);
+    ctx.fillText('Open palm, click, or press Space', w / 2, btnY + btnH + 24);
   }
 
   ctx.restore();

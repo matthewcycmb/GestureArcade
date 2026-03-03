@@ -2,7 +2,7 @@
 
 const BASE_SPEED = 5;
 const MAX_SPEED_MULT = 2.5;
-const SPEED_INCREASE = 0.06; // 6% per paddle hit
+const SPEED_INCREASE = 0.10; // 10% per paddle hit
 const RADIUS = 10;
 const TRAIL_LENGTH = 6;
 

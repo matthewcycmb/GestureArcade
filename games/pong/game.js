@@ -7,6 +7,7 @@ import { playPaddleHit, playWallBounce, playScore, playGameOver } from './audio.
 import {
   drawCourt,
   drawScores,
+  drawHitFlash,
   drawMenuScreen,
   drawReadyScreen,
   drawCountdown,
@@ -21,7 +22,7 @@ const ctx = canvas.getContext('2d');
 
 const GAME_WIDTH = 960;
 const GAME_HEIGHT = 540;
-const WIN_SCORE = 7;
+const WIN_SCORE = 3;
 const SERVE_DELAY = 90; // frames (~1.5s at 60fps)
 
 canvas.width = GAME_WIDTH;
@@ -79,6 +80,14 @@ let ai = new AI(GAME_WIDTH - PADDLE_INSET, GAME_WIDTH, GAME_HEIGHT);
 let serveTimer = 0;
 let lastTimestamp = 0;
 let gameOverCooldown = 0;
+
+// Visual effects
+let hitFlashSide = null;  // 'left' | 'right'
+let hitFlashTime = 0;     // timestamp when hit occurred
+let scorePopSide = null;  // 'left' | 'right'
+let scorePopTime = 0;     // timestamp when score occurred
+let matchPointTimer = 0;  // countdown frames for "MATCH POINT" flash
+const MATCH_POINT_DURATION = 120; // ~2 seconds at 60fps
 
 // Keyboard paddle control state
 const keys = {};
@@ -271,7 +280,9 @@ canvas.addEventListener('click', (e) => {
     state = 'PLAYING';
     startServe();
   } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
-    state = 'MENU';
+    resetGame();
+    state = 'PLAYING';
+    startServe();
   }
 });
 
@@ -292,7 +303,9 @@ canvas.addEventListener('touchstart', (e) => {
     state = 'PLAYING';
     startServe();
   } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
-    state = 'MENU';
+    resetGame();
+    state = 'PLAYING';
+    startServe();
   }
 }, { passive: false });
 
@@ -322,7 +335,9 @@ window.addEventListener('keydown', (e) => {
   } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
     if (e.code === 'Space') {
       e.preventDefault();
-      state = 'MENU';
+      resetGame();
+      state = 'PLAYING';
+      startServe();
     }
   }
 });
@@ -345,7 +360,9 @@ engine.on(GESTURES.OPEN_PALM, () => {
     state = 'PLAYING';
     startServe();
   } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
-    state = 'MENU';
+    resetGame();
+    state = 'PLAYING';
+    startServe();
   }
 });
 
@@ -362,8 +379,11 @@ function gameLoop(timestamp) {
   lastTimestamp = timestamp;
 
   // --- Update ---
-  updatePaddlesFromHands();
-  updatePaddlesFromKeyboard(dt);
+  // Freeze paddles during GAME_OVER (ball is already stopped, paddles ignore input)
+  if (state !== 'GAME_OVER') {
+    updatePaddlesFromHands();
+    updatePaddlesFromKeyboard(dt);
+  }
 
   if (state === 'PLAYING') {
     // Serve countdown
@@ -390,6 +410,8 @@ function gameLoop(timestamp) {
         ball.x = leftPaddle.x + leftPaddle.width / 2 + ball.radius;
         ball.bouncePaddle(leftHit.hitY, leftPaddle.height);
         playPaddleHit();
+        hitFlashSide = 'left';
+        hitFlashTime = timestamp;
       }
 
       const rightHit = checkBallPaddle(ball, rightPaddle);
@@ -397,6 +419,8 @@ function gameLoop(timestamp) {
         ball.x = rightPaddle.x - rightPaddle.width / 2 - ball.radius;
         ball.bouncePaddle(rightHit.hitY, rightPaddle.height);
         playPaddleHit();
+        hitFlashSide = 'right';
+        hitFlashTime = timestamp;
       }
 
       // Out of bounds (scoring)
@@ -407,6 +431,8 @@ function gameLoop(timestamp) {
         } else {
           rightScore++;
         }
+        scorePopSide = oob.scorer;
+        scorePopTime = timestamp;
         playScore();
 
         // Check for game over
@@ -415,6 +441,10 @@ function gameLoop(timestamp) {
           gameOverCooldown = 30;
           playGameOver();
         } else {
+          // Trigger match point flash when someone is one away from winning
+          if (leftScore === WIN_SCORE - 1 || rightScore === WIN_SCORE - 1) {
+            matchPointTimer = MATCH_POINT_DURATION;
+          }
           // Serve toward the scorer's opponent
           startServe(oob.scorer === 'left' ? 1 : -1);
         }
@@ -427,12 +457,18 @@ function gameLoop(timestamp) {
     }
   }
 
-  // Paddle physics (always — so keyboard works in all states)
-  leftPaddle.update(dt);
-  rightPaddle.update(dt);
+  // Paddle physics (skip during GAME_OVER to freeze paddles in place)
+  if (state !== 'GAME_OVER') {
+    leftPaddle.update(dt);
+    rightPaddle.update(dt);
+  }
 
   if (state === 'GAME_OVER' && gameOverCooldown > 0) {
     gameOverCooldown -= dt;
+  }
+
+  if (matchPointTimer > 0) {
+    matchPointTimer -= dt;
   }
 
   // --- Render ---
@@ -440,7 +476,8 @@ function gameLoop(timestamp) {
   drawCourt(ctx, GAME_WIDTH, GAME_HEIGHT);
 
   if (state === 'PLAYING' || state === 'GAME_OVER') {
-    drawScores(ctx, leftScore, rightScore, GAME_WIDTH);
+    drawScores(ctx, leftScore, rightScore, GAME_WIDTH, GAME_HEIGHT, scorePopSide, timestamp - scorePopTime);
+    drawHitFlash(ctx, GAME_WIDTH, GAME_HEIGHT, hitFlashSide, timestamp - hitFlashTime);
     leftPaddle.draw(ctx);
     rightPaddle.draw(ctx);
     ball.draw(ctx);
@@ -449,6 +486,20 @@ function gameLoop(timestamp) {
     if (state === 'PLAYING' && serveTimer > 0) {
       const count = Math.ceil(serveTimer / (SERVE_DELAY / 3));
       drawCountdown(ctx, GAME_WIDTH, GAME_HEIGHT, count);
+    }
+
+    // Match point flash
+    if (matchPointTimer > 0) {
+      const progress = matchPointTimer / MATCH_POINT_DURATION;
+      // Fade in quickly, hold, then fade out in the last 30%
+      const alpha = progress < 0.3 ? progress / 0.3 : 1;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 48px monospace';
+      ctx.fillStyle = `rgba(255, 80, 80, ${alpha * 0.9})`;
+      ctx.fillText('MATCH POINT', GAME_WIDTH / 2, GAME_HEIGHT / 2);
+      ctx.restore();
     }
   }
 
