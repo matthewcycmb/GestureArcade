@@ -88,6 +88,7 @@ let scorePopSide = null;  // 'left' | 'right'
 let scorePopTime = 0;     // timestamp when score occurred
 let matchPointTimer = 0;  // countdown frames for "MATCH POINT" flash
 const MATCH_POINT_DURATION = 120; // ~2 seconds at 60fps
+let scoredMessage = null;  // "PLAYER 1 SCORES!" etc., shown during serve delay
 
 // Keyboard paddle control state
 const keys = {};
@@ -390,6 +391,7 @@ function gameLoop(timestamp) {
     if (serveTimer > 0) {
       serveTimer -= dt;
       if (serveTimer <= 0) {
+        scoredMessage = null;
         ball.serve();
       }
     }
@@ -445,6 +447,12 @@ function gameLoop(timestamp) {
           if (leftScore === WIN_SCORE - 1 || rightScore === WIN_SCORE - 1) {
             matchPointTimer = MATCH_POINT_DURATION;
           }
+          // Show scored message during serve pause
+          if (mode === '1P') {
+            scoredMessage = oob.scorer === 'left' ? 'YOU SCORED!' : 'AI SCORES!';
+          } else {
+            scoredMessage = oob.scorer === 'left' ? 'PLAYER 1 SCORES!' : 'PLAYER 2 SCORES!';
+          }
           // Serve toward the scorer's opponent
           startServe(oob.scorer === 'left' ? 1 : -1);
         }
@@ -482,10 +490,23 @@ function gameLoop(timestamp) {
     rightPaddle.draw(ctx);
     ball.draw(ctx);
 
-    // Serve countdown overlay
+    // Serve pause: scored message or countdown
     if (state === 'PLAYING' && serveTimer > 0) {
-      const count = Math.ceil(serveTimer / (SERVE_DELAY / 3));
-      drawCountdown(ctx, GAME_WIDTH, GAME_HEIGHT, count);
+      if (scoredMessage) {
+        // Fade out in the last 20% of the delay (~0.3s)
+        const fadeThreshold = SERVE_DELAY * 0.2;
+        const alpha = serveTimer < fadeThreshold ? serveTimer / fadeThreshold : 1;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 42px monospace';
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillText(scoredMessage, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+        ctx.restore();
+      } else {
+        const count = Math.ceil(serveTimer / (SERVE_DELAY / 3));
+        drawCountdown(ctx, GAME_WIDTH, GAME_HEIGHT, count);
+      }
     }
 
     // Match point flash
