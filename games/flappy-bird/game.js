@@ -69,12 +69,13 @@ const SYNC_INTERVAL = 6; // send position sync every ~6 frames (~100ms at 60fps)
 
 // --- Pinch detection ---
 const BASE_PINCH_THRESHOLD = 0.06;
-const BASE_RELEASE_THRESHOLD = 0.08;
+const BASE_RELEASE_THRESHOLD = 0.10;
 const BASE_PALM_WIDTH = 0.18;
-const MAX_PINCH_MS = 200;
 const HAND_LOST_GRACE_MS = 150; // ignore brief tracking dropouts
+const HELD_FLAP_INTERVAL_MS = 250; // auto-flap every 250ms while pinch is held
 let isPinched = false;
 let pinchStartTime = 0;
+let lastFlapTime = 0;
 let lastHandSeenTime = 0;
 let landmarks = [];
 
@@ -89,38 +90,43 @@ function palmWidth(hand) {
 }
 
 function checkPinch(lms) {
+  const now = performance.now();
+
   if (!lms || lms.length === 0) {
     // Grace period: don't reset pinch state immediately when hand tracking drops
-    if (isPinched && performance.now() - lastHandSeenTime < HAND_LOST_GRACE_MS) {
+    if (isPinched && now - lastHandSeenTime < HAND_LOST_GRACE_MS) {
       return; // keep current pinch state during brief dropout
     }
     isPinched = false;
-    pinchStartTime = 0;
     return;
   }
   const hand = lms[0];
   if (!hand || hand.length < 21) return;
-  lastHandSeenTime = performance.now();
+  lastHandSeenTime = now;
 
   const thumbTip = hand[4];
   const indexTip = hand[8];
   const dist = distance2D(thumbTip, indexTip);
 
   const rawScale = palmWidth(hand) / BASE_PALM_WIDTH;
-  // Clamp scale to prevent bad landmark frames from killing detection
   const scale = Math.max(0.5, Math.min(rawScale, 3.0));
   const pinchThreshold = BASE_PINCH_THRESHOLD * scale;
   const releaseThreshold = BASE_RELEASE_THRESHOLD * scale;
 
   if (isPinched) {
-    const elapsed = performance.now() - pinchStartTime;
-    if (dist > releaseThreshold || elapsed >= MAX_PINCH_MS) {
+    if (dist > releaseThreshold) {
+      // Player released — allow new pinch detection
       isPinched = false;
-      pinchStartTime = 0;
+    } else {
+      // Still holding pinch — auto-flap at interval so holding = climbing
+      if (now - lastFlapTime >= HELD_FLAP_INTERVAL_MS) {
+        lastFlapTime = now;
+        onFlap();
+      }
     }
   } else if (dist < pinchThreshold) {
     isPinched = true;
-    pinchStartTime = performance.now();
+    lastFlapTime = now;
     onFlap();
   }
 }
