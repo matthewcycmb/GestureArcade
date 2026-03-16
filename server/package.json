@@ -1,0 +1,13 @@
+{
+  "name": "gesture-arcade-relay",
+  "version": "1.0.0",
+  "description": "WebSocket relay server for Flappy Bird multiplayer",
+  "type": "module",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "dependencies": {
+    "ws": "^8"
+  }
+}
