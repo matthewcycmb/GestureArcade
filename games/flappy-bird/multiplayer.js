@@ -5,7 +5,7 @@
 //   multiplayer.on('START', ({ seed }) => resetGame(seed));
 
 const WS_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL)
-  || 'ws://localhost:3001';
+  || `ws://${window.location.hostname}:3001`;
 
 class MultiplayerClient {
   constructor() {
