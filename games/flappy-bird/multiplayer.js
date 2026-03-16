@@ -4,6 +4,7 @@
 //   multiplayer.connect();
 //   multiplayer.on('START', ({ seed }) => resetGame(seed));
 
+// Set VITE_WS_URL in Vercel env vars to point to your deployed relay server (e.g. wss://your-relay.up.railway.app)
 const WS_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL)
   || `ws://${window.location.hostname}:3001`;
 
