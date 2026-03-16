@@ -204,10 +204,6 @@ function resetGame(seed) {
   gameOverCooldown = 0;
   syncTimer = 0;
 
-  // Reset pinch state so it doesn't carry over between rounds
-  isPinched = false;
-  pinchStartTime = 0;
-
   if (mode === 'multi') {
     opponentBird = new Bird(GAME_WIDTH * 0.3 + 8, GAME_HEIGHT * 0.4);
     opponentScore = 0;
@@ -230,8 +226,12 @@ function onFlap() {
       multiplayer.sendFlap();
     }
   } else if (state === 'GAME_OVER' && gameOverCooldown <= 0 && mode === 'solo') {
-    state = 'READY';
+    // Go straight to PLAYING with a flap — avoids the pinch immediately
+    // re-triggering from READY and the player missing the transition
     resetGame();
+    state = 'PLAYING';
+    bird.flap();
+    playFlap();
   } else if (state === 'MENU') {
     state = 'READY';
     resetGame();

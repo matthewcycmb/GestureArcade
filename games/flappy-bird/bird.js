@@ -12,6 +12,7 @@ export class Bird {
   constructor(x, y) {
     this.x = x;
     this.y = y;
+    this.baseY = y;        // anchor for bob animation
     this.velocity = 0;
     this.rotation = 0;    // degrees
     this.targetRotation = 0;
@@ -52,9 +53,9 @@ export class Bird {
     }
   }
 
-  // Bob animation for menu/ready screens
+  // Bob animation for menu/ready screens — absolute, never drifts
   bob(timestamp) {
-    this.y += Math.sin(timestamp / 200) * 0.5;
+    this.y = this.baseY + Math.sin(timestamp / 200) * 6;
     this.wingAngle += this.wingSpeed;
   }
 
