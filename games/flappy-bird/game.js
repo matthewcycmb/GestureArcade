@@ -72,8 +72,10 @@ const BASE_PINCH_THRESHOLD = 0.06;
 const BASE_RELEASE_THRESHOLD = 0.10;
 const BASE_PALM_WIDTH = 0.18;
 const MAX_PINCH_MS = 500;
+const HAND_LOST_GRACE_MS = 150; // ignore brief tracking dropouts
 let isPinched = false;
 let pinchStartTime = 0;
+let lastHandSeenTime = 0;
 let landmarks = [];
 
 function distance2D(a, b) {
@@ -88,12 +90,17 @@ function palmWidth(hand) {
 
 function checkPinch(lms) {
   if (!lms || lms.length === 0) {
+    // Grace period: don't reset pinch state immediately when hand tracking drops
+    if (isPinched && performance.now() - lastHandSeenTime < HAND_LOST_GRACE_MS) {
+      return; // keep current pinch state during brief dropout
+    }
     isPinched = false;
     pinchStartTime = 0;
     return;
   }
   const hand = lms[0];
   if (!hand || hand.length < 21) return;
+  lastHandSeenTime = performance.now();
 
   const thumbTip = hand[4];
   const indexTip = hand[8];
