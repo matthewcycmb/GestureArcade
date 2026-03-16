@@ -69,9 +69,9 @@ const SYNC_INTERVAL = 6; // send position sync every ~6 frames (~100ms at 60fps)
 
 // --- Pinch detection ---
 const BASE_PINCH_THRESHOLD = 0.06;
-const BASE_RELEASE_THRESHOLD = 0.10;
+const BASE_RELEASE_THRESHOLD = 0.08;
 const BASE_PALM_WIDTH = 0.18;
-const MAX_PINCH_MS = 500;
+const MAX_PINCH_MS = 200;
 const HAND_LOST_GRACE_MS = 150; // ignore brief tracking dropouts
 let isPinched = false;
 let pinchStartTime = 0;
