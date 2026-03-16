@@ -71,34 +71,40 @@ export class GestureEngine extends EventEmitter {
   _tick() {
     if (!this._running) return;
 
-    const now = performance.now();
-    const result = this._handTracker.detect(this._video, now);
+    try {
+      const now = performance.now();
+      const result = this._handTracker.detect(this._video, now);
 
-    if (result && result.landmarks && result.landmarks.length > 0) {
-      // Smooth landmarks to eliminate jitter when hands are stationary
-      const smoothedAll = [];
-      for (let handIdx = 0; handIdx < result.landmarks.length; handIdx++) {
-        const raw = result.landmarks[handIdx];
-        const smoothed = this._smoothingEnabled
-          ? this._smoother.smooth(raw, handIdx, now)
-          : raw;
-        smoothedAll.push(smoothed);
+      if (result && result.landmarks && result.landmarks.length > 0) {
+        // Smooth landmarks to eliminate jitter when hands are stationary
+        const smoothedAll = [];
+        for (let handIdx = 0; handIdx < result.landmarks.length; handIdx++) {
+          const raw = result.landmarks[handIdx];
+          const smoothed = this._smoothingEnabled
+            ? this._smoother.smooth(raw, handIdx, now)
+            : raw;
+          smoothedAll.push(smoothed);
+        }
+
+        this.emit('frame', {
+          landmarks: smoothedAll,
+          handednesses: result.handednesses,
+        });
+
+        for (let handIdx = 0; handIdx < smoothedAll.length; handIdx++) {
+          const landmarks = smoothedAll[handIdx];
+          const handedness = result.handednesses?.[handIdx]?.[0]?.categoryName || 'Unknown';
+          this._detectGestures(landmarks, handIdx, handedness, now);
+        }
+      } else {
+        // No hands detected — emit empty frame so renderers clear the overlay
+        this._smoother.reset();
+        this.emit('frame', { landmarks: [], handednesses: [] });
       }
-
-      this.emit('frame', {
-        landmarks: smoothedAll,
-        handednesses: result.handednesses,
-      });
-
-      for (let handIdx = 0; handIdx < smoothedAll.length; handIdx++) {
-        const landmarks = smoothedAll[handIdx];
-        const handedness = result.handednesses?.[handIdx]?.[0]?.categoryName || 'Unknown';
-        this._detectGestures(landmarks, handIdx, handedness, now);
-      }
-    } else {
-      // No hands detected — emit empty frame so renderers clear the overlay
-      this._smoother.reset();
-      this.emit('frame', { landmarks: [], handednesses: [] });
+    } catch (err) {
+      // Log but don't break the loop — transient detection failures
+      // (WebGL context pressure, MediaPipe hiccups) should not kill tracking
+      console.warn('Hand detection error:', err.message);
     }
 
     this._rafId = requestAnimationFrame(() => this._tick());

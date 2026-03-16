@@ -11,6 +11,7 @@ export default defineConfig({
         roadRacer: 'games/road-racer/index.html',
         fruitNinja: 'games/fruit-ninja/index.html',
         pong: 'games/pong/index.html',
+        pinchDash: 'games/pinch-dash/index.html',
       },
     },
   },

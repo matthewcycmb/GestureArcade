@@ -587,7 +587,7 @@
   <script>
     // --- Settings persistence ---
     const SETTINGS_KEY = 'gesture-arcade-settings';
-    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird', 'road-racer': 'Road Racer', 'fruit-ninja': 'Fruit Ninja', 'pong': 'Pong' };
+    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird', 'road-racer': 'Road Racer', 'fruit-ninja': 'Fruit Ninja', 'pong': 'Pong', 'pinch-dash': 'Pinch Dash' };
 
     function getDefaultSettings() {
       return {
@@ -596,7 +596,7 @@
         camera: { deviceId: '' },
         tracking: { sensitivity: 'normal' },
         cooldownMs: 300,
-        highScores: { 'flappy-bird': 0, 'road-racer': 0, 'fruit-ninja': 0, 'pong': 0 }
+        highScores: { 'flappy-bird': 0, 'road-racer': 0, 'fruit-ninja': 0, 'pong': 0, 'pinch-dash': 0 }
       };
     }
 
@@ -789,6 +789,7 @@
       { id: 'road-racer', title: 'Road Racer', subtitle: 'Tilt to steer', path: '/games/road-racer/index.html', available: true },
       { id: 'fruit-ninja', title: 'Fruit Ninja', subtitle: 'Swipe to slice', path: '/games/fruit-ninja/index.html', available: true },
       { id: 'pong', title: 'Pong', subtitle: 'Hand tracks paddle', path: '/games/pong/index.html', available: true },
+      { id: 'pinch-dash', title: 'Pinch Dash', subtitle: 'Pinch to jump', path: '/games/pinch-dash/index.html', available: true },
       { id: 'coming-5', title: 'Brick Breaker', subtitle: 'Coming Soon', available: false },
       { id: 'coming-6', title: 'Whack-a-Mole', subtitle: 'Coming Soon', available: false },
       { id: 'coming-7', title: 'Snake', subtitle: 'Coming Soon', available: false },
@@ -1152,6 +1153,106 @@
       return c.toDataURL();
     }
 
+    // --- Procedural Pinch Dash thumbnail ---
+    function generatePinchDashThumbnail(width, height) {
+      const c = document.createElement('canvas');
+      c.width = width;
+      c.height = height;
+      const ctx = c.getContext('2d');
+
+      // Dark background
+      ctx.fillStyle = '#05050f';
+      ctx.fillRect(0, 0, width, height);
+
+      // Stars
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      [[0.08,0.1],[0.2,0.05],[0.45,0.15],[0.65,0.08],[0.82,0.18],[0.95,0.06]].forEach(([rx,ry]) => {
+        ctx.beginPath();
+        ctx.arc(rx * width, ry * height, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Grid lines (neon blue)
+      ctx.strokeStyle = 'rgba(30,100,255,0.12)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < width; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height * 0.82); ctx.stroke();
+      }
+      for (let y = 0; y < height * 0.82; y += 30) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+
+      const groundY = height * 0.82;
+
+      // Ground
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fillRect(0, groundY, width, height - groundY);
+      ctx.shadowColor = '#00ffcc';
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(width, groundY);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Spikes
+      const spikeW = 14, spikeH = 20;
+      [[0.42, 1], [0.5, 1], [0.7, 1], [0.72, 1]].forEach(([rx]) => {
+        const sx = rx * width;
+        ctx.shadowColor = '#ff8800';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath();
+        ctx.moveTo(sx, groundY);
+        ctx.lineTo(sx + spikeW, groundY);
+        ctx.lineTo(sx + spikeW / 2, groundY - spikeH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Block
+      const bx = width * 0.84, bw = 18, bh = 18;
+      ctx.shadowColor = '#00ffcc';
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = '#006644';
+      ctx.fillRect(bx, groundY - bh, bw, bh);
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, groundY - bh, bw, bh);
+      ctx.shadowBlur = 0;
+
+      // Cube
+      const cubeX = width * 0.22, cubeY = groundY - 16, cubeS = 22;
+      ctx.shadowColor = '#4488ff';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#1a3aff';
+      ctx.fillRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS, cubeS);
+      ctx.strokeStyle = '#4488ff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS, cubeS);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS / 2, cubeS / 2);
+
+      // Neon geometric shape (purple outline)
+      ctx.strokeStyle = 'rgba(180,0,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const cx = width * 0.88, cy = height * 0.25, cr = 22;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+        if (i === 0) ctx.moveTo(cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
+        else ctx.lineTo(cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      return c.toDataURL();
+    }
+
     // --- Placeholder gradient thumbnails ---
     function generatePlaceholderThumbnail(width, height, hue) {
       const c = document.createElement('canvas');
@@ -1202,6 +1303,8 @@
         img.src = generateFruitNinjaThumbnail(thumbW, thumbH);
       } else if (game.available && game.id === 'pong') {
         img.src = generatePongThumbnail(thumbW, thumbH);
+      } else if (game.available && game.id === 'pinch-dash') {
+        img.src = generatePinchDashThumbnail(thumbW, thumbH);
       } else {
         img.src = generatePlaceholderThumbnail(thumbW, thumbH, placeholderHues[hueIdx++] || 220);
       }

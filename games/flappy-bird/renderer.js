@@ -271,3 +271,106 @@ export function drawGameOverScreen(ctx, score, gameWidth, gameHeight, timestamp,
 
   ctx.restore();
 }
+
+// --- Multiplayer HUD ---
+
+/**
+ * Draw split score display for multiplayer: "P1: 7    P2: 4"
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} p1Score
+ * @param {number} p2Score
+ * @param {number} gameWidth
+ */
+export function drawMultiplayerHUD(ctx, p1Score, p2Score, gameWidth) {
+  ctx.save();
+  ctx.font = 'bold 32px sans-serif';
+  ctx.textBaseline = 'top';
+
+  const y = 12;
+  const padding = 16;
+
+  // P1 score (left)
+  const p1Text = `P1: ${p1Score}`;
+  ctx.textAlign = 'left';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.strokeText(p1Text, padding + 2, y + 2);
+  ctx.fillStyle = '#F7DC6F'; // yellow — local player
+  ctx.fillText(p1Text, padding, y);
+
+  // P2 score (right)
+  const p2Text = `P2: ${p2Score}`;
+  ctx.textAlign = 'right';
+  ctx.strokeText(p2Text, gameWidth - padding + 2, y + 2);
+  ctx.fillStyle = '#5DADE2'; // blue — opponent
+  ctx.fillText(p2Text, gameWidth - padding, y);
+
+  ctx.restore();
+}
+
+// --- Opponent bird (blue tint) ---
+
+/**
+ * Draw the opponent bird with a blue color scheme.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{ x: number, y: number, velocity: number, rotation: number, wingAngle: number, width: number, height: number }} bird
+ */
+export function drawOpponentBird(ctx, bird) {
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+  ctx.rotate((bird.rotation * Math.PI) / 180);
+
+  const w = bird.width;
+  const h = bird.height;
+
+  // Body — blue
+  ctx.fillStyle = '#5DADE2';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1A5276';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Belly — light blue
+  ctx.fillStyle = '#AED6F1';
+  ctx.beginPath();
+  ctx.ellipse(2, 3, w / 3, h / 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing — dark blue, animated
+  const wingFlap = Math.sin(bird.wingAngle * 4) * 5;
+  ctx.fillStyle = '#2980B9';
+  ctx.beginPath();
+  ctx.ellipse(-4, -2 + wingFlap, 10, 6, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1A5276';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(10, -5, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(12, -5, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak — orange
+  ctx.fillStyle = '#F39C12';
+  ctx.beginPath();
+  ctx.moveTo(14, 0);
+  ctx.lineTo(22, 2);
+  ctx.lineTo(14, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}

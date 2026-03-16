@@ -9,10 +9,11 @@ const MIN_GAP = 120;
 const BASE_SPEED = 3;
 
 export class PipeManager {
-  constructor(gameWidth, gameHeight, groundY) {
+  constructor(gameWidth, gameHeight, groundY, rng = Math.random) {
     this.gameWidth = gameWidth;
     this.gameHeight = gameHeight;
     this.groundY = groundY;
+    this.rng = rng;
     this.pipes = [];
     this.speed = BASE_SPEED;
     this.gap = INITIAL_GAP;
@@ -39,7 +40,7 @@ export class PipeManager {
     const maxY = this.groundY - 80 - this.gap / 2;
 
     // Constrain Y within +-130px of previous pipe
-    let gapCenter = minY + Math.random() * (maxY - minY);
+    let gapCenter = minY + this.rng() * (maxY - minY);
     gapCenter = Math.max(
       Math.min(gapCenter, this.lastPipeY + 130),
       this.lastPipeY - 130
