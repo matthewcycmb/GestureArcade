@@ -99,7 +99,9 @@ function checkPinch(lms) {
   const indexTip = hand[8];
   const dist = distance2D(thumbTip, indexTip);
 
-  const scale = palmWidth(hand) / BASE_PALM_WIDTH;
+  const rawScale = palmWidth(hand) / BASE_PALM_WIDTH;
+  // Clamp scale to prevent bad landmark frames from killing detection
+  const scale = Math.max(0.5, Math.min(rawScale, 3.0));
   const pinchThreshold = BASE_PINCH_THRESHOLD * scale;
   const releaseThreshold = BASE_RELEASE_THRESHOLD * scale;
 
@@ -257,9 +259,11 @@ function hideLobby() {
 
 // --- Button wiring ---
 document.getElementById('btn-solo').addEventListener('click', () => {
+  multiplayer.disconnect(); // Clean up any stale WebSocket connection
   hideLobby();
   mode = 'solo';
   state = 'MENU';
+  resetGame();
 });
 
 document.getElementById('btn-create').addEventListener('click', () => {
