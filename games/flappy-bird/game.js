@@ -204,6 +204,10 @@ function resetGame(seed) {
   gameOverCooldown = 0;
   syncTimer = 0;
 
+  // Reset pinch state so it doesn't carry over between rounds
+  isPinched = false;
+  pinchStartTime = 0;
+
   if (mode === 'multi') {
     opponentBird = new Bird(GAME_WIDTH * 0.3 + 8, GAME_HEIGHT * 0.4);
     opponentScore = 0;
@@ -304,6 +308,7 @@ document.getElementById('btn-back-join').addEventListener('click', () => {
 document.getElementById('btn-play-again').addEventListener('click', () => {
   document.getElementById('mp-game-over').style.display = 'none';
   multiplayer.sendPlayAgain();
+  resetGame(); // Reset bird so it's not stuck on the ground
   showLobby('mp-create-section');
   document.getElementById('mp-code-display').textContent = '';
   document.getElementById('mp-status').textContent = 'Waiting for opponent to accept rematch...';
@@ -314,7 +319,8 @@ document.getElementById('btn-mp-quit').addEventListener('click', () => {
   document.getElementById('mp-game-over').style.display = 'none';
   multiplayer.disconnect();
   mode = 'solo';
-  state = 'MP_LOBBY'; // show lobby again
+  resetGame(); // Reset bird so it's not stuck on the ground
+  state = 'MP_LOBBY';
   showLobby('mp-main');
 });
 
@@ -382,6 +388,7 @@ multiplayer.on('OPPONENT_DEAD', ({ score }) => {
 multiplayer.on('REMATCH_REQUESTED', () => {
   // Auto-accept: send play again back and wait for REMATCH_START
   document.getElementById('mp-game-over').style.display = 'none';
+  resetGame(); // Reset bird so it's not stuck on the ground
   multiplayer.sendPlayAgain();
   showLobby('mp-create-section');
   document.getElementById('mp-code-display').textContent = '';
@@ -444,6 +451,7 @@ multiplayer.on('error', () => {
 function startMpCountdown() {
   mpCountdown = 3;
   mpCountdownTimer = 0;
+  resetGame(); // Ensure bird is in starting position for countdown
   state = 'MP_COUNTDOWN';
   hideLobby();
 }
