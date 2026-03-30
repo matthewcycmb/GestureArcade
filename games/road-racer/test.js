@@ -1,165 +1,238 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { computePointX, pointXToRoadX, EnemyManager, checkCollision, getRoadXAtZ, PLAYER_CAR_W } from './logic.js';
+import {
+  computePointY, pointYToGameY, EnemyManager, CoinManager,
+  checkCollision, checkCoinCollision,
+  getLaneY, PLAYER_X, PLAYER_W, PLAYER_H, GAME_WIDTH, GAME_HEIGHT,
+  ENEMY_BIRD_W, ENEMY_BIRD_H, OCEAN_Y, MAX_HEALTH, COIN_SIZE, COIN_POINTS,
+} from './logic.js';
 
-// --- Helper: create a landmark point ---
-function lm(x, y) {
-  return { x, y, z: 0 };
-}
+// --- Helper ---
+function lm(x, y) { return { x, y, z: 0 }; }
 
-// --- Helper: create a 21-landmark hand with index tip at given position ---
 function makeHand(indexTipX, indexTipY) {
   const hand = [];
-  for (let i = 0; i < 21; i++) {
-    hand.push(lm(0.5, 0.5)); // filler
-  }
-  hand[8] = lm(indexTipX, indexTipY); // index finger tip
+  for (let i = 0; i < 21; i++) hand.push(lm(0.5, 0.5));
+  hand[8] = lm(indexTipX, indexTipY);
   return hand;
 }
 
 // ============================================================
-// POINT TRACKING TESTS
+// POINT TRACKING
 // ============================================================
 describe('Point Tracking', () => {
   it('returns null when no landmarks', () => {
-    expect(computePointX(null)).toBe(null);
-    expect(computePointX([])).toBe(null);
+    expect(computePointY(null)).toBe(null);
+    expect(computePointY([])).toBe(null);
   });
 
-  it('returns mirrored x position from index tip', () => {
-    // Index tip at camera x=0.3 → mirrored = 0.7
-    const hand = makeHand(0.3, 0.5);
-    expect(computePointX(hand)).toBeCloseTo(0.7);
+  it('returns y position from index tip', () => {
+    const hand = makeHand(0.5, 0.3);
+    expect(computePointY(hand)).toBeCloseTo(0.3);
   });
 
-  it('finger on left of camera maps to right side (mirror)', () => {
-    const hand = makeHand(0.8, 0.5); // far right in camera = left screen
-    expect(computePointX(hand)).toBeCloseTo(0.2);
+  it('pointYToGameY maps 0 to top, 1 to ocean line', () => {
+    const top = pointYToGameY(0);
+    const bottom = pointYToGameY(1);
+    expect(top).toBeLessThan(bottom);
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(bottom).toBeLessThanOrEqual(OCEAN_Y);
   });
 
-  it('finger at center maps to ~0.5', () => {
-    const hand = makeHand(0.5, 0.5);
-    expect(computePointX(hand)).toBeCloseTo(0.5);
-  });
-
-  it('pointXToRoadX maps 0 to left edge, 1 to right edge', () => {
-    const road = getRoadXAtZ(1);
-    const margin = PLAYER_CAR_W / 2;
-    const left = pointXToRoadX(0);
-    const right = pointXToRoadX(1);
-    expect(left).toBeCloseTo(road.leftEdge + margin);
-    expect(right).toBeCloseTo(road.rightEdge - margin);
-  });
-
-  it('pointXToRoadX maps 0.5 to road center', () => {
-    const road = getRoadXAtZ(1);
-    const center = pointXToRoadX(0.5);
-    const roadCenter = (road.leftEdge + road.rightEdge) / 2;
-    expect(center).toBeCloseTo(roadCenter);
+  it('pointYToGameY maps 0.5 to roughly center of sky area', () => {
+    const center = pointYToGameY(0.5);
+    expect(center).toBeCloseTo(OCEAN_Y / 2, -1);
   });
 });
 
 // ============================================================
-// ENEMY MANAGER TESTS
+// ENEMY MANAGER
 // ============================================================
 describe('EnemyManager', () => {
   let em;
-
-  beforeEach(() => {
-    em = new EnemyManager();
-  });
+  beforeEach(() => { em = new EnemyManager(); });
 
   it('initializes with empty enemies and zero score', () => {
     expect(em.enemies.length).toBe(0);
     expect(em.score).toBe(0);
   });
 
-  it('spawns enemies at z=0', () => {
-    em.spawn();
+  it('spawns enemies off-screen right', () => {
+    em.spawnSingle();
     expect(em.enemies.length).toBe(1);
-    expect(em.enemies[0].z).toBe(0);
-    expect([0, 1, 2]).toContain(em.enemies[0].lane);
+    expect(em.enemies[0].x).toBeGreaterThan(GAME_WIDTH);
   });
 
   it('moves enemies toward player on update', () => {
-    em.spawn();
-    const initialZ = em.enemies[0].z;
-    em.spawnInterval = 9999; // prevent auto-spawn
+    em.spawnSingle();
+    const initialX = em.enemies[0].x;
+    em.spawnInterval = 9999;
     em.update(1);
-    expect(em.enemies[0].z).toBeGreaterThan(initialZ);
+    expect(em.enemies[0].x).toBeLessThan(initialX);
   });
 
-  it('scores when enemy passes z > 1.1', () => {
-    em.spawn();
-    em.enemies[0].z = 1.09;
+  it('scores when enemy passes player', () => {
+    em.spawnSingle();
+    em.enemies[0].x = PLAYER_X - 49;
     em.spawnInterval = 9999;
-    em.update(10); // push past 1.1
+    em.update(1);
     expect(em.score).toBe(1);
   });
 
-  it('removes enemies past z > 1.3', () => {
-    em.spawn();
-    em.enemies[0].z = 1.29;
+  it('removes enemies past left edge', () => {
+    em.spawnSingle();
+    em.enemies[0].x = -99;
     em.spawnInterval = 9999;
-    em.update(10); // push past 1.3
+    em.update(1);
     expect(em.enemies.length).toBe(0);
   });
 
   it('does not block all 3 lanes simultaneously', () => {
-    // Fill lanes 0 and 1 near horizon
-    em.enemies.push({ lane: 0, z: 0.05, isTruck: false, color: '#f00', width: 50, height: 80, scored: false });
-    em.enemies.push({ lane: 1, z: 0.05, isTruck: false, color: '#0f0', width: 50, height: 80, scored: false });
-    em.spawn();
-    // The new spawn should prefer lane 2 (the only unblocked lane)
+    em.enemies.push({ lane: 0, x: GAME_WIDTH + 10, y: getLaneY(0), isBig: false, width: ENEMY_BIRD_W, height: ENEMY_BIRD_H, scored: false });
+    em.enemies.push({ lane: 1, x: GAME_WIDTH + 10, y: getLaneY(1), isBig: false, width: ENEMY_BIRD_W, height: ENEMY_BIRD_H, scored: false });
+    em.spawnSingle();
     const lastEnemy = em.enemies[em.enemies.length - 1];
     expect(lastEnemy.lane).toBe(2);
   });
 
   it('resets state correctly', () => {
-    em.spawn();
+    em.spawnSingle();
     em.score = 15;
-    em.enemySpeed = 0.05;
+    em.enemySpeed = 10;
     em.reset();
     expect(em.enemies.length).toBe(0);
     expect(em.score).toBe(0);
-    expect(em.enemySpeed).toBe(0.012);
+    expect(em.enemySpeed).toBe(4);
+  });
+
+  it('update returns scored and speedUp flags', () => {
+    em.spawnSingle();
+    em.spawnInterval = 9999;
+    const result = em.update(1);
+    expect(result).toHaveProperty('scored');
+    expect(result).toHaveProperty('speedUp');
+  });
+
+  it('signals speedUp at score milestones', () => {
+    em.score = 9;
+    em.spawnSingle();
+    em.enemies[0].x = PLAYER_X - 49;
+    em.spawnInterval = 9999;
+    const result = em.update(1);
+    expect(result.scored).toBe(true);
+    expect(result.speedUp).toBe(true);
+  });
+
+  it('spawns wave patterns after score 10', () => {
+    em.score = 10;
+    em.waveCounter = 4; // next spawn will be 5th (wave)
+    em.spawn();
+    // Wave patterns spawn 2+ enemies
+    expect(em.enemies.length).toBeGreaterThanOrEqual(2);
   });
 });
 
 // ============================================================
-// COLLISION TESTS
+// COIN MANAGER
+// ============================================================
+describe('CoinManager', () => {
+  let cm;
+  beforeEach(() => { cm = new CoinManager(); });
+
+  it('initializes empty', () => {
+    expect(cm.coins.length).toBe(0);
+  });
+
+  it('spawns coins off-screen right', () => {
+    cm.spawn();
+    expect(cm.coins.length).toBe(1);
+    expect(cm.coins[0].x).toBeGreaterThan(GAME_WIDTH);
+  });
+
+  it('moves coins left on update', () => {
+    cm.spawn();
+    const initialX = cm.coins[0].x;
+    cm.framesSinceSpawn = 0; // prevent extra spawns
+    cm.update(1);
+    expect(cm.coins[0].x).toBeLessThan(initialX);
+  });
+
+  it('removes coins past left edge', () => {
+    cm.spawn();
+    cm.coins[0].x = -49;
+    cm.update(1);
+    expect(cm.coins.length).toBe(0);
+  });
+
+  it('removes collected coins', () => {
+    cm.spawn();
+    cm.coins[0].collected = true;
+    cm.update(1);
+    expect(cm.coins.length).toBe(0);
+  });
+
+  it('resets correctly', () => {
+    cm.spawn();
+    cm.reset();
+    expect(cm.coins.length).toBe(0);
+    expect(cm.framesSinceSpawn).toBe(0);
+  });
+});
+
+// ============================================================
+// COLLISION
 // ============================================================
 describe('Collision', () => {
   it('detects collision when enemy overlaps player', () => {
-    // Player at center (240), enemy in lane 1 (center) at z=0.85 (overlaps player Y)
     const enemies = [{
-      lane: 1, z: 0.85, isTruck: false, color: '#f00',
-      width: 50, height: 80, scored: false,
+      lane: 1, x: PLAYER_X, y: GAME_HEIGHT / 3,
+      isBig: false, width: ENEMY_BIRD_W, height: ENEMY_BIRD_H, scored: false,
     }];
-    const result = checkCollision(240, enemies);
-    expect(result).toBe(true);
+    expect(checkCollision(GAME_HEIGHT / 3, enemies)).toBe(true);
   });
 
-  it('no collision when enemy is far away (z < 0.75)', () => {
+  it('no collision when enemy is far away horizontally', () => {
     const enemies = [{
-      lane: 1, z: 0.5, isTruck: false, color: '#f00',
-      width: 50, height: 80, scored: false,
+      lane: 1, x: GAME_WIDTH - 100, y: GAME_HEIGHT / 3,
+      isBig: false, width: ENEMY_BIRD_W, height: ENEMY_BIRD_H, scored: false,
     }];
-    expect(checkCollision(240, enemies)).toBe(false);
+    expect(checkCollision(GAME_HEIGHT / 3, enemies)).toBe(false);
   });
 
-  it('no collision when player is in different lane', () => {
-    // Player far left, enemy in right lane at close z
+  it('no collision when player is in different lane vertically', () => {
     const enemies = [{
-      lane: 2, z: 0.95, isTruck: false, color: '#f00',
-      width: 50, height: 80, scored: false,
+      lane: 2, x: PLAYER_X, y: OCEAN_Y - 50,
+      isBig: false, width: ENEMY_BIRD_W, height: ENEMY_BIRD_H, scored: false,
     }];
-    // Player X at far left of road
-    expect(checkCollision(100, enemies)).toBe(false);
+    expect(checkCollision(50, enemies)).toBe(false);
   });
 });
 
 // ============================================================
-// DIFFICULTY SCALING TESTS
+// COIN COLLISION
+// ============================================================
+describe('Coin Collision', () => {
+  it('detects coin pickup when overlapping', () => {
+    const coins = [{ x: PLAYER_X, y: 200, collected: false }];
+    const collected = checkCoinCollision(200, coins);
+    expect(collected.length).toBe(1);
+    expect(coins[0].collected).toBe(true);
+  });
+
+  it('does not collect distant coins', () => {
+    const coins = [{ x: GAME_WIDTH - 100, y: 200, collected: false }];
+    const collected = checkCoinCollision(200, coins);
+    expect(collected.length).toBe(0);
+  });
+
+  it('does not re-collect already collected coins', () => {
+    const coins = [{ x: PLAYER_X, y: 200, collected: true }];
+    const collected = checkCoinCollision(200, coins);
+    expect(collected.length).toBe(0);
+  });
+});
+
+// ============================================================
+// DIFFICULTY SCALING
 // ============================================================
 describe('Difficulty', () => {
   it('increases speed at milestones', () => {
@@ -178,8 +251,8 @@ describe('Difficulty', () => {
 
   it('respects minimum spawn interval', () => {
     const em = new EnemyManager();
-    em.scaleDifficulty(200); // very high score
-    expect(em.spawnInterval).toBeGreaterThanOrEqual(35);
+    em.scaleDifficulty(200);
+    expect(em.spawnInterval).toBeGreaterThanOrEqual(25);
   });
 
   it('speed scales exponentially', () => {
@@ -188,38 +261,40 @@ describe('Difficulty', () => {
     const speed10 = em.enemySpeed;
     em.scaleDifficulty(20);
     const speed20 = em.enemySpeed;
-    // Exponential: speed20/speed10 should equal speed10/baseSpeed
-    const ratio1 = speed10 / 0.012;
+    const ratio1 = speed10 / 4;
     const ratio2 = speed20 / speed10;
-    expect(Math.abs(ratio1 - ratio2)).toBeLessThan(0.001);
+    expect(Math.abs(ratio1 - ratio2)).toBeLessThan(0.01);
   });
 });
 
 // ============================================================
-// STATE MACHINE TESTS
+// STATE MACHINE
 // ============================================================
 describe('State Machine', () => {
   function createStateMachine() {
     let state = 'MENU';
     let gameOverCooldown = 0;
+    let health = MAX_HEALTH;
+    let invincibilityTimer = 0;
 
     return {
       get state() { return state; },
       set state(s) { state = s; },
-      get gameOverCooldown() { return gameOverCooldown; },
+      get health() { return health; },
+      get invincibilityTimer() { return invincibilityTimer; },
       onStart() {
-        if (state === 'MENU') {
-          state = 'PLAYING';
-        } else if (state === 'GAME_OVER' && gameOverCooldown <= 0) {
-          state = 'PLAYING';
-        }
+        if (state === 'MENU') { state = 'PLAYING'; }
+        else if (state === 'GAME_OVER' && gameOverCooldown <= 0) { state = 'PLAYING'; health = MAX_HEALTH; }
       },
-      triggerGameOver() {
-        state = 'GAME_OVER';
-        gameOverCooldown = 30;
+      onHit() {
+        if (invincibilityTimer > 0) return;
+        health--;
+        if (health <= 0) { state = 'GAME_OVER'; gameOverCooldown = 30; }
+        else { invincibilityTimer = 90; }
       },
       tickCooldown(dt) {
         if (gameOverCooldown > 0) gameOverCooldown -= dt;
+        if (invincibilityTimer > 0) invincibilityTimer -= dt;
       },
     };
   }
@@ -230,29 +305,61 @@ describe('State Machine', () => {
     expect(sm.state).toBe('PLAYING');
   });
 
-  it('collision triggers GAME_OVER', () => {
+  it('first hit reduces health but stays PLAYING', () => {
     const sm = createStateMachine();
-    sm.state = 'PLAYING';
-    sm.triggerGameOver();
-    expect(sm.state).toBe('GAME_OVER');
+    sm.onStart();
+    sm.onHit();
+    expect(sm.state).toBe('PLAYING');
+    expect(sm.health).toBe(MAX_HEALTH - 1);
   });
 
-  it('GAME_OVER -> PLAYING after cooldown', () => {
+  it('grants invincibility after hit', () => {
     const sm = createStateMachine();
-    sm.state = 'PLAYING';
-    sm.triggerGameOver();
-    sm.onStart(); // blocked during cooldown
+    sm.onStart();
+    sm.onHit();
+    expect(sm.invincibilityTimer).toBe(90);
+  });
+
+  it('ignores hits during invincibility', () => {
+    const sm = createStateMachine();
+    sm.onStart();
+    sm.onHit();
+    sm.onHit(); // should be ignored
+    expect(sm.health).toBe(MAX_HEALTH - 1);
+  });
+
+  it('third hit triggers GAME_OVER', () => {
+    const sm = createStateMachine();
+    sm.onStart();
+    sm.onHit();
+    sm.tickCooldown(100); // clear invincibility
+    sm.onHit();
+    sm.tickCooldown(100);
+    sm.onHit();
+    expect(sm.state).toBe('GAME_OVER');
+    expect(sm.health).toBe(0);
+  });
+
+  it('GAME_OVER -> PLAYING after cooldown restores health', () => {
+    const sm = createStateMachine();
+    sm.onStart();
+    sm.onHit(); sm.tickCooldown(100);
+    sm.onHit(); sm.tickCooldown(100);
+    sm.onHit();
     expect(sm.state).toBe('GAME_OVER');
     sm.tickCooldown(31);
     sm.onStart();
     expect(sm.state).toBe('PLAYING');
+    expect(sm.health).toBe(MAX_HEALTH);
   });
 
   it('restart blocked during cooldown', () => {
     const sm = createStateMachine();
-    sm.state = 'PLAYING';
-    sm.triggerGameOver();
-    sm.tickCooldown(15); // only halfway
+    sm.onStart();
+    sm.onHit(); sm.tickCooldown(100);
+    sm.onHit(); sm.tickCooldown(100);
+    sm.onHit();
+    sm.tickCooldown(15);
     sm.onStart();
     expect(sm.state).toBe('GAME_OVER');
   });
