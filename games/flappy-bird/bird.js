@@ -8,6 +8,35 @@ const MIN_ROTATION = -35;
 const ROTATION_SPEED = 4;
 const ROTATION_LERP = 0.15;
 
+// Fire cat sprite animation — 8 extracted PNG frames
+const FIRECAT_COUNT = 8;
+const FIRECAT_DURATION = 80;
+const fireCatFrames = [];
+for (let i = 0; i < FIRECAT_COUNT; i++) {
+  const img = document.createElement('img');
+  img.src = `./assets/firecat-frame-${i}.png`;
+  fireCatFrames.push(img);
+}
+let fcIndex = 0, fcTimer = 0, fcLastTs = 0;
+
+export function preloadCatFrames() {
+  return Promise.all(fireCatFrames.map(img => new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = resolve;
+    img.onerror = () => resolve();
+  })));
+}
+
+export function updateCatAnimation(timestamp) {
+  if (!fcLastTs) { fcLastTs = timestamp; return; }
+  fcTimer += timestamp - fcLastTs;
+  fcLastTs = timestamp;
+  if (fcTimer >= FIRECAT_DURATION) {
+    fcTimer -= FIRECAT_DURATION;
+    fcIndex = (fcIndex + 1) % FIRECAT_COUNT;
+  }
+}
+
 export class Bird {
   constructor(x, y) {
     this.x = x;
@@ -16,9 +45,9 @@ export class Bird {
     this.velocity = 0;
     this.rotation = 0;    // degrees
     this.targetRotation = 0;
-    this.width = 34;
-    this.height = 26;
-    this.hitboxInset = 4;  // forgiving hitbox
+    this.width = 56;
+    this.height = 34;
+    this.hitboxInset = 6;
 
     // Wing animation
     this.wingAngle = 0;
@@ -69,63 +98,19 @@ export class Bird {
   }
 
   draw(ctx) {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate((this.rotation * Math.PI) / 180);
-
-    const w = this.width;
-    const h = this.height;
-
-    // Body — yellow
-    ctx.fillStyle = '#F7DC6F';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Body outline
-    ctx.strokeStyle = '#B7950B';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Belly — cream
-    ctx.fillStyle = '#FCF3CF';
-    ctx.beginPath();
-    ctx.ellipse(2, 3, w / 3, h / 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Wing — gold, animated
-    const wingFlap = Math.sin(this.wingAngle * 4) * 5;
-    ctx.fillStyle = '#D4AC0D';
-    ctx.beginPath();
-    ctx.ellipse(-4, -2 + wingFlap, 10, 6, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#B7950B';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Eye — white with black pupil
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(10, -5, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    ctx.arc(12, -5, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Beak — red/orange
-    ctx.fillStyle = '#E74C3C';
-    ctx.beginPath();
-    ctx.moveTo(14, 0);
-    ctx.lineTo(22, 2);
-    ctx.lineTo(14, 5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
+    const frame = fireCatFrames[fcIndex];
+    if (frame && frame.complete && frame.naturalWidth > 0) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      const tilt = Math.max(-20, Math.min(30, this.velocity * 2.5));
+      ctx.rotate((tilt * Math.PI) / 180);
+      ctx.drawImage(frame, -this.width / 2, -this.height / 2, this.width, this.height);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#ff8800';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.width / 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }

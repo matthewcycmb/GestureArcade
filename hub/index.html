@@ -4,31 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gesture Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    :root {
+      --font-pixel: 'Press Start 2P', monospace;
+      --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --bg-base: #0d1117;
+      --bg-card: #161b22;
+      --accent: #58a6ff;
+      --accent-light: #79c0ff;
+      --accent-green: #3fb950;
+      --white: #ffffff;
+      --border: rgba(88, 166, 255, 0.25);
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0a;
-      color: #fff;
+      font-family: var(--font-body);
+      background: var(--bg-base);
+      color: var(--white);
       min-height: 100vh;
       overflow-x: hidden;
     }
 
-    /* Background image — vivid at top, fades to dark */
+    /* Animated pixel starfield background */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: url('./bg.webp') no-repeat 90% 20%;
-      background-size: 120%;
-      filter: brightness(0.5) saturate(1.2);
       pointer-events: none;
       z-index: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(88,166,255,0.6) 50%, transparent 50%),
+        radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.4) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 50% 10%, rgba(88,166,255,0.5) 50%, transparent 50%),
+        radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,0.3) 50%, transparent 50%),
+        radial-gradient(1px 1px at 90% 80%, rgba(88,166,255,0.4) 50%, transparent 50%),
+        radial-gradient(1.5px 1.5px at 15% 90%, rgba(255,255,255,0.35) 50%, transparent 50%),
+        radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.3) 50%, transparent 50%),
+        radial-gradient(1px 1px at 60% 55%, rgba(88,166,255,0.35) 50%, transparent 50%);
+      background-size: 200px 200px;
+      animation: starfield-drift 60s linear infinite;
     }
 
+    @keyframes starfield-drift {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-200px); }
+    }
+
+    /* CRT scanline overlay */
     body::after {
-      display: none;
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
     }
 
     .container {
@@ -36,81 +75,104 @@
       z-index: 1;
       max-width: 800px;
       margin: 0 auto;
-      padding: 140px 24px 64px;
+      padding: 56px 24px 64px;
     }
 
-    /* Header */
-    .header {
-      position: relative;
+    /* Floating icon buttons — top-right corner */
+    .top-icons {
+      position: absolute;
+      top: 112px;
+      right: 24px;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 40px;
+      gap: 10px;
+      z-index: 10;
     }
 
-    .header h1 {
-      font-size: 40px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
+    /* Hero section — centered arcade branding */
+    .hero {
       text-align: center;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+      padding: 48px 0 36px;
     }
 
-    .header-desc {
+    .arcade-title {
+      font-family: var(--font-pixel);
+      font-size: 28px;
+      color: var(--accent);
+      letter-spacing: 6px;
+      text-shadow:
+        0 0 20px rgba(88, 166, 255, 0.5),
+        0 0 40px rgba(88, 166, 255, 0.2);
+      margin-bottom: 20px;
+      animation: title-flicker 4s ease-in-out infinite;
+    }
+
+    @keyframes title-flicker {
+      0%, 100% { opacity: 1; }
+      92% { opacity: 1; }
+      93% { opacity: 0.8; }
+      94% { opacity: 1; }
+      96% { opacity: 0.85; }
+      97% { opacity: 1; }
+    }
+
+    .hero-welcome {
+      font-family: var(--font-body);
+      font-size: 18px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+    }
+
+    .hero-desc {
       font-size: 15px;
       font-weight: 400;
-      color: rgba(255, 255, 255, 0.7);
-      text-align: center;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
-      margin-top: 8px;
-    }
-
-    .header-icons {
-      display: flex;
-      gap: 12px;
-      position: absolute;
-      right: 0;
+      color: rgba(255, 255, 255, 0.35);
+      line-height: 1.6;
     }
 
     .icon-btn {
       width: 40px;
       height: 40px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.06);
+      border-radius: 0;
+      border: 2px solid var(--border);
+      background: rgba(88, 166, 255, 0.06);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
+      transition: background 0.1s steps(2), border-color 0.1s steps(2);
     }
 
     .icon-btn:hover {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.3);
+      background: rgba(88, 166, 255, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
     }
 
     .icon-btn svg {
       width: 18px;
       height: 18px;
-      fill: rgba(255,255,255,0.7);
+      fill: var(--accent);
     }
 
     /* Section heading */
     .section-heading {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 24px;
+      font-family: var(--font-pixel);
+      font-size: 12px;
+      font-weight: 400;
+      margin-bottom: 28px;
       display: flex;
       align-items: center;
       gap: 8px;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.5);
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
     }
 
     .section-heading .arrow {
       opacity: 0.5;
-      font-size: 18px;
+      font-size: 14px;
     }
 
     /* Card grid */
@@ -123,13 +185,34 @@
     /* Card */
     .card {
       position: relative;
-      border-radius: 14px;
       overflow: hidden;
       aspect-ratio: 2.4 / 1;
-      border: 1px solid rgba(100, 180, 255, 0.2);
-      background: linear-gradient(135deg, #1e2d4a 0%, #16213a 100%);
+      border: 2px solid var(--border);
+      border-radius: 0;
+      background: var(--bg-card);
       cursor: default;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      transition: none;
+      clip-path: polygon(
+        0 8px, 4px 8px, 4px 4px, 8px 4px, 8px 0,
+        calc(100% - 8px) 0, calc(100% - 8px) 4px, calc(100% - 4px) 4px, calc(100% - 4px) 8px, 100% 8px,
+        100% calc(100% - 8px), calc(100% - 4px) calc(100% - 8px), calc(100% - 4px) calc(100% - 4px), calc(100% - 8px) calc(100% - 4px), calc(100% - 8px) 100%,
+        8px 100%, 8px calc(100% - 4px), 4px calc(100% - 4px), 4px calc(100% - 8px), 0 calc(100% - 8px)
+      );
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.06) 2px,
+        rgba(0, 0, 0, 0.06) 4px
+      );
+      z-index: 2;
     }
 
     .card.available {
@@ -137,9 +220,13 @@
     }
 
     .card.available:hover {
-      transform: translateY(-3px);
-      border-color: rgba(100, 180, 255, 0.5);
-      box-shadow: 0 8px 32px rgba(56, 119, 224, 0.2), 0 0 0 1px rgba(100, 180, 255, 0.15);
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow:
+        0 0 0 1px var(--accent),
+        0 0 15px rgba(88, 166, 255, 0.3),
+        inset 0 0 15px rgba(88, 166, 255, 0.1);
+      transition: transform 0.1s steps(2), border-color 0.1s steps(2), box-shadow 0.1s steps(2);
     }
 
     .card-thumbnail {
@@ -156,25 +243,45 @@
       bottom: 0;
       left: 0;
       right: 0;
-      padding: 16px 16px 14px;
-      background: linear-gradient(to top, rgba(10, 15, 30, 0.9) 0%, rgba(10, 15, 30, 0.5) 60%, transparent 100%);
+      padding: 14px 16px 12px;
+      background: linear-gradient(to top, rgba(13, 17, 23, 0.95) 0%, rgba(13, 17, 23, 0.6) 60%, transparent 100%);
+      z-index: 3;
     }
 
     .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      line-height: 1.2;
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.6;
     }
 
     .card-subtitle {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.45);
-      margin-top: 3px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 4px;
+    }
+
+    /* Game tag badge */
+    .card-tag {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 4;
+      font-family: var(--font-pixel);
+      font-size: 7px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      border: 1px solid var(--accent);
+      background: rgba(13, 17, 23, 0.85);
+      color: var(--accent);
+      backdrop-filter: blur(4px);
     }
 
     /* Coming soon overlay */
     .card.coming-soon .card-thumbnail {
-      filter: brightness(0.35) saturate(0.3);
+      filter: brightness(0.25) saturate(0.2) grayscale(0.3);
     }
 
     .coming-soon-badge {
@@ -185,27 +292,36 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      z-index: 3;
     }
 
     .lock-icon {
-      width: 28px;
-      height: 28px;
-      opacity: 0.4;
+      width: 24px;
+      height: 24px;
+      opacity: 0.5;
+      image-rendering: pixelated;
     }
 
     .lock-icon svg {
       width: 100%;
       height: 100%;
-      fill: rgba(255,255,255,0.5);
+      fill: var(--accent);
     }
 
     .coming-soon-text {
-      font-size: 11px;
-      font-weight: 600;
+      font-family: var(--font-pixel);
+      font-size: 8px;
+      font-weight: 400;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: rgba(255,255,255,0.35);
+      letter-spacing: 2px;
+      color: rgba(88, 166, 255, 0.5);
+      animation: blink-slow 2s steps(2) infinite;
+    }
+
+    @keyframes blink-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
     /* Modal backdrop */
@@ -229,28 +345,30 @@
 
     /* Modal panel */
     .modal-panel {
-      background: #1a2440;
-      border: 1px solid rgba(100, 180, 255, 0.25);
-      border-radius: 16px;
-      box-shadow: 0 0 40px rgba(56, 119, 224, 0.15), 0 16px 48px rgba(0, 0, 0, 0.4);
+      background: var(--bg-card);
+      border: 2px solid var(--accent);
+      border-radius: 0;
+      box-shadow: 0 0 30px rgba(88, 166, 255, 0.2), 0 0 60px rgba(88, 166, 255, 0.05);
       width: 90%;
       max-width: 440px;
       max-height: 80vh;
       overflow-y: auto;
       padding: 28px;
       position: relative;
-      transform: translateY(12px) scale(0.97);
-      transition: transform 0.2s ease;
+      transform: translateY(8px);
+      transition: transform 0.15s steps(3);
     }
 
     .modal-backdrop.open .modal-panel {
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
 
     .modal-panel h2 {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 20px;
+      font-family: var(--font-pixel);
+      font-size: 14px;
+      font-weight: 400;
+      margin-bottom: 24px;
+      color: var(--accent);
     }
 
     .modal-close {
@@ -259,24 +377,25 @@
       right: 16px;
       width: 32px;
       height: 32px;
-      border: none;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: rgba(88, 166, 255, 0.06);
+      border-radius: 0;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
+      transition: background 0.1s steps(2);
     }
 
     .modal-close:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(88, 166, 255, 0.15);
+      border-color: var(--accent);
     }
 
     .modal-close svg {
       width: 16px;
       height: 16px;
-      fill: rgba(255, 255, 255, 0.6);
+      fill: var(--accent);
     }
 
     /* Modal form elements */
@@ -290,51 +409,53 @@
 
     .modal-label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.7);
+      font-family: var(--font-pixel);
+      font-size: 8px;
+      font-weight: 400;
+      color: var(--accent-light);
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 8px;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
     }
 
     .modal-input {
       width: 100%;
       padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 15px;
-      font-family: inherit;
+      background: rgba(88, 166, 255, 0.05);
+      border: 2px solid var(--border);
+      border-radius: 0;
+      color: var(--white);
+      font-size: 14px;
+      font-family: var(--font-body);
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.1s steps(2);
     }
 
     .modal-input:focus {
-      border-color: rgba(100, 180, 255, 0.5);
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
     }
 
     .modal-select {
       width: 100%;
       padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 15px;
-      font-family: inherit;
+      background: rgba(88, 166, 255, 0.05);
+      border: 2px solid var(--border);
+      border-radius: 0;
+      color: var(--white);
+      font-size: 14px;
+      font-family: var(--font-body);
       outline: none;
       cursor: pointer;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.5)' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(88,166,255,0.5)' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
     }
 
     .modal-select option {
-      background: #1a2440;
-      color: #fff;
+      background: var(--bg-card);
+      color: var(--white);
     }
 
     /* Slider row */
@@ -348,28 +469,29 @@
       flex: 1;
       -webkit-appearance: none;
       appearance: none;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.12);
-      border-radius: 3px;
+      height: 4px;
+      background: rgba(88, 166, 255, 0.2);
+      border-radius: 0;
       outline: none;
     }
 
     .slider-row input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #5b9cf5;
-      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 0;
       cursor: pointer;
-      border: 2px solid #fff;
+      border: 2px solid var(--white);
     }
 
     .slider-value {
-      font-size: 14px;
-      font-weight: 600;
-      min-width: 42px;
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      font-weight: 400;
+      min-width: 48px;
       text-align: right;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--accent);
     }
 
     /* Mute toggle */
@@ -387,34 +509,35 @@
 
     .toggle {
       width: 44px;
-      height: 24px;
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 0;
       cursor: pointer;
       position: relative;
-      transition: background 0.2s;
-      border: none;
+      transition: background 0.1s steps(2);
+      border: 2px solid var(--border);
       padding: 0;
     }
 
     .toggle.active {
-      background: #5b9cf5;
+      background: rgba(88, 166, 255, 0.3);
+      border-color: var(--accent);
     }
 
     .toggle::after {
       content: '';
       position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 18px;
-      height: 18px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: var(--white);
+      border-radius: 0;
+      transition: transform 0.1s steps(3);
     }
 
     .toggle.active::after {
-      transform: translateX(20px);
+      transform: translateX(22px);
     }
 
     /* Sensitivity buttons */
@@ -426,25 +549,28 @@
     .preset-btn {
       flex: 1;
       padding: 8px 0;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 14px;
-      font-weight: 600;
+      background: rgba(88, 166, 255, 0.05);
+      border: 2px solid var(--border);
+      border-radius: 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: var(--font-pixel);
+      font-size: 8px;
+      font-weight: 400;
       cursor: pointer;
-      transition: all 0.15s;
-      font-family: inherit;
+      transition: all 0.1s steps(2);
+      letter-spacing: 1px;
     }
 
     .preset-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(88, 166, 255, 0.12);
+      border-color: var(--accent);
     }
 
     .preset-btn.selected {
-      background: rgba(91, 156, 245, 0.2);
-      border-color: #5b9cf5;
-      color: #fff;
+      background: rgba(88, 166, 255, 0.2);
+      border-color: var(--accent);
+      color: var(--white);
+      box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
     }
 
     /* High scores */
@@ -456,10 +582,11 @@
       display: flex;
       justify-content: space-between;
       padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
+      background: rgba(88, 166, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 0;
       margin-bottom: 6px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .scores-list .game-name {
@@ -467,14 +594,15 @@
     }
 
     .scores-list .score-val {
-      font-weight: 700;
-      color: #5b9cf5;
+      font-family: var(--font-pixel);
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--accent);
     }
 
     .no-scores {
-      font-size: 14px;
+      font-size: 13px;
       color: rgba(255, 255, 255, 0.4);
-      font-style: italic;
     }
 
     /* Responsive */
@@ -483,39 +611,49 @@
         grid-template-columns: 1fr;
       }
 
-      .header h1 {
-        font-size: 28px;
-        text-align: left;
-        padding-right: 100px;
+      .arcade-title {
+        font-size: 14px;
+        letter-spacing: 3px;
+      }
+
+      .hero {
+        padding: 36px 0 24px;
+      }
+
+      .hero-welcome {
+        font-size: 13px;
+      }
+
+      .top-icons {
+        top: 20px;
+        right: 16px;
       }
 
       .container {
-        padding: 24px 16px 48px;
+        padding: 20px 16px 48px;
       }
 
-      .header-icons {
-        right: 16px;
-        top: 28px;
-      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <header class="header">
-      <h1>Welcome, Matthew</h1>
-      <p class="header-desc">Control every game with just your hands. No controllers, no setup — just play.</p>
-      <div class="header-icons">
-        <div class="icon-btn" title="Profile">
-          <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-        </div>
-        <div class="icon-btn" title="Settings">
-          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
-        </div>
+    <div class="top-icons">
+      <div class="icon-btn" title="Profile">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
       </div>
-    </header>
+      <div class="icon-btn" title="Settings">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+      </div>
+    </div>
 
-    <div class="section-heading">Most Popular <span class="arrow">&rarr;</span></div>
+    <section class="hero">
+      <div class="arcade-title">GESTURE ARCADE</div>
+      <p class="hero-welcome">Welcome, Player</p>
+      <p class="hero-desc">Control every game with just your hands. No controllers, no setup — just play.</p>
+    </section>
+
+    <div class="section-heading">Play now <span class="arrow">&rarr;</span></div>
 
     <div class="card-grid" id="cardGrid"></div>
   </div>
@@ -587,7 +725,7 @@
   <script>
     // --- Settings persistence ---
     const SETTINGS_KEY = 'gesture-arcade-settings';
-    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird', 'road-racer': 'Road Racer', 'fruit-ninja': 'Fruit Ninja', 'pong': 'Pong', 'pinch-dash': 'Pinch Dash' };
+    const GAME_NAMES = { 'flappy-bird': 'Flappy Bird', 'road-racer': 'Sky Dodger', 'fruit-ninja': 'Fruit Ninja', 'pong': 'Pong', 'pinch-dash': 'Pinch Dash' };
 
     function getDefaultSettings() {
       return {
@@ -657,7 +795,7 @@
     });
 
     // --- Profile modal ---
-    const headerH1 = document.querySelector('.header h1');
+    const headerH1 = document.querySelector('.hero-welcome');
     const nameInput = document.getElementById('nameInput');
 
     function updateHeaderName() {
@@ -785,11 +923,11 @@
     saveSettings(settings);
 
     const GAMES = [
-      { id: 'flappy-bird', title: 'Flappy Bird', subtitle: 'Pinch to flap', path: '/games/flappy-bird/index.html', available: true },
-      { id: 'road-racer', title: 'Road Racer', subtitle: 'Tilt to steer', path: '/games/road-racer/index.html', available: true },
-      { id: 'fruit-ninja', title: 'Fruit Ninja', subtitle: 'Swipe to slice', path: '/games/fruit-ninja/index.html', available: true },
-      { id: 'pong', title: 'Pong', subtitle: 'Hand tracks paddle', path: '/games/pong/index.html', available: true },
-      { id: 'pinch-dash', title: 'Pinch Dash', subtitle: 'Pinch to jump', path: '/games/pinch-dash/index.html', available: true },
+      { id: 'flappy-bird', title: 'Flappy Bird', subtitle: 'Pinch to flap', path: '/games/flappy-bird/index.html', available: true, tag: 'Most Popular' },
+      { id: 'road-racer', title: 'Sky Dodger', subtitle: 'Point to dodge', path: '/games/road-racer/index.html', available: true, tag: 'New' },
+      // { id: 'fruit-ninja', title: 'Fruit Ninja', subtitle: 'Swipe to slice', path: '/games/fruit-ninja/index.html', available: true },
+      { id: 'pong', title: 'Pong', subtitle: 'Hand tracks paddle', path: '/games/pong/index.html', available: true, tag: 'Classic' },
+      { id: 'pinch-dash', title: 'Pinch Dash', subtitle: 'Pinch to jump', path: '/games/pinch-dash/index.html', available: true, tag: 'Most Fun' },
       { id: 'coming-5', title: 'Brick Breaker', subtitle: 'Coming Soon', available: false },
       { id: 'coming-6', title: 'Whack-a-Mole', subtitle: 'Coming Soon', available: false },
       { id: 'coming-7', title: 'Snake', subtitle: 'Coming Soon', available: false },
@@ -798,229 +936,145 @@
       { id: 'coming-10', title: 'Tetris', subtitle: 'Coming Soon', available: false },
     ];
 
-    // --- Procedural Flappy Bird thumbnail ---
-    function generateFlappyThumbnail(width, height) {
+    // --- Flappy Bird thumbnail — composites real game assets ---
+    function generateFlappyThumbnail(width, height, imgEl) {
       const c = document.createElement('canvas');
       c.width = width;
       c.height = height;
       const ctx = c.getContext('2d');
 
-      // Sky gradient
-      const sky = ctx.createLinearGradient(0, 0, 0, height);
-      sky.addColorStop(0, '#4FC3F7');
-      sky.addColorStop(0.6, '#81D4FA');
-      sky.addColorStop(1, '#B3E5FC');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, width, height);
+      const bgImg = new Image();
+      bgImg.src = '/games/flappy-bird/assets/bg-frame-0.png';
+      const birdImg = new Image();
+      birdImg.src = '/games/flappy-bird/assets/firecat-frame-0.png';
 
-      // Clouds
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      [[0.15, 0.18, 14], [0.55, 0.12, 10], [0.8, 0.25, 12]].forEach(([rx, ry, s]) => {
-        const cx = rx * width, cy = ry * height;
-        ctx.beginPath();
-        ctx.arc(cx, cy, s, 0, Math.PI * 2);
-        ctx.arc(cx + s * 0.8, cy - s * 0.2, s * 0.65, 0, Math.PI * 2);
-        ctx.arc(cx + s * 1.3, cy, s * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      function draw() {
+        // Background
+        if (bgImg.complete && bgImg.naturalWidth > 0) {
+          ctx.drawImage(bgImg, 0, 0, width, height);
+        } else {
+          const sky = ctx.createLinearGradient(0, 0, 0, height);
+          sky.addColorStop(0, '#c5dde8');
+          sky.addColorStop(1, '#e8eff4');
+          ctx.fillStyle = sky;
+          ctx.fillRect(0, 0, width, height);
+        }
 
-      const groundY = height * 0.82;
-      const pipeW = 26;
-      const capH = 10;
-      const capOv = 3;
-      const gap = height * 0.28;
+        const pipeW = 26;
+        const capH = 10;
+        const capOv = 3;
+        const gap = height * 0.28;
 
-      // Pipes
-      const pipes = [
-        { x: width * 0.3, gapCenter: height * 0.38 },
-        { x: width * 0.6, gapCenter: height * 0.52 },
-        { x: width * 0.88, gapCenter: height * 0.42 },
-      ];
+        // Pipes
+        const pipes = [
+          { x: width * 0.3, gapCenter: height * 0.38 },
+          { x: width * 0.6, gapCenter: height * 0.52 },
+          { x: width * 0.88, gapCenter: height * 0.42 },
+        ];
 
-      for (const p of pipes) {
-        const topH = p.gapCenter - gap / 2;
-        const botY = p.gapCenter + gap / 2;
+        for (const p of pipes) {
+          const topH = p.gapCenter - gap / 2;
+          const botY = p.gapCenter + gap / 2;
+          const pg = ctx.createLinearGradient(p.x, 0, p.x + pipeW, 0);
+          pg.addColorStop(0, '#2ECC71');
+          pg.addColorStop(0.3, '#58D68D');
+          pg.addColorStop(0.7, '#2ECC71');
+          pg.addColorStop(1, '#1E8449');
+          ctx.fillStyle = pg;
+          ctx.fillRect(p.x, 0, pipeW, topH);
+          ctx.fillRect(p.x, botY, pipeW, height - botY);
+          ctx.strokeStyle = '#145A32';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(p.x, 0, pipeW, topH);
+          ctx.strokeRect(p.x, botY, pipeW, height - botY);
+          const cg = ctx.createLinearGradient(p.x - capOv, 0, p.x + pipeW + capOv, 0);
+          cg.addColorStop(0, '#27AE60');
+          cg.addColorStop(0.3, '#6CDE96');
+          cg.addColorStop(0.7, '#27AE60');
+          cg.addColorStop(1, '#1A7A42');
+          ctx.fillStyle = cg;
+          ctx.fillRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
+          ctx.fillRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
+          ctx.strokeRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
+          ctx.strokeRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
+        }
 
-        // Pipe body
-        const pg = ctx.createLinearGradient(p.x, 0, p.x + pipeW, 0);
-        pg.addColorStop(0, '#2ECC71');
-        pg.addColorStop(0.3, '#58D68D');
-        pg.addColorStop(0.7, '#2ECC71');
-        pg.addColorStop(1, '#1E8449');
+        // Pixel bird
+        if (birdImg.complete && birdImg.naturalWidth > 0) {
+          ctx.save();
+          ctx.translate(width * 0.22, height * 0.4);
+          ctx.rotate(-0.15);
+          ctx.drawImage(birdImg, -22, -12, 44, 26);
+          ctx.restore();
+        }
 
-        ctx.fillStyle = pg;
-        ctx.fillRect(p.x, 0, pipeW, topH);
-        ctx.fillRect(p.x, botY, pipeW, groundY - botY);
-
-        // Pipe borders
-        ctx.strokeStyle = '#145A32';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(p.x, 0, pipeW, topH);
-        ctx.strokeRect(p.x, botY, pipeW, groundY - botY);
-
-        // Caps
-        const cg = ctx.createLinearGradient(p.x - capOv, 0, p.x + pipeW + capOv, 0);
-        cg.addColorStop(0, '#27AE60');
-        cg.addColorStop(0.3, '#6CDE96');
-        cg.addColorStop(0.7, '#27AE60');
-        cg.addColorStop(1, '#1A7A42');
-        ctx.fillStyle = cg;
-        ctx.fillRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
-        ctx.fillRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
-        ctx.strokeRect(p.x - capOv, topH - capH, pipeW + capOv * 2, capH);
-        ctx.strokeRect(p.x - capOv, botY, pipeW + capOv * 2, capH);
+        if (imgEl) imgEl.src = c.toDataURL();
       }
 
-      // Ground
-      ctx.fillStyle = '#8B6914';
-      ctx.fillRect(0, groundY, width, height - groundY);
-      ctx.fillStyle = '#4CAF50';
-      ctx.fillRect(0, groundY, width, 6);
-      ctx.fillStyle = '#66BB6A';
-      ctx.fillRect(0, groundY, width, 2);
-
-      // Bird
-      const bx = width * 0.22, by = height * 0.4;
-      ctx.save();
-      ctx.translate(bx, by);
-      ctx.rotate(-0.15);
-
-      // Body
-      ctx.fillStyle = '#F7DC6F';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 12, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#B7950B';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Belly
-      ctx.fillStyle = '#FCF3CF';
-      ctx.beginPath();
-      ctx.ellipse(1, 2, 7, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Wing
-      ctx.fillStyle = '#D4AC0D';
-      ctx.beginPath();
-      ctx.ellipse(-3, -3, 6, 4, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eye
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(6, -3, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#1a1a1a';
-      ctx.beginPath();
-      ctx.arc(7.5, -3, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Beak
-      ctx.fillStyle = '#E74C3C';
-      ctx.beginPath();
-      ctx.moveTo(9, 0);
-      ctx.lineTo(15, 1.5);
-      ctx.lineTo(9, 3.5);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
+      draw();
+      let loaded = 0;
+      const onLoad = () => { loaded++; if (loaded >= 2) draw(); };
+      bgImg.onload = onLoad;
+      birdImg.onload = onLoad;
 
       return c.toDataURL();
     }
 
     // --- Procedural Road Racer thumbnail ---
-    function generateRoadRacerThumbnail(width, height) {
+    // Sky Dodger thumbnail — composites real game assets onto canvas.
+    // Returns a placeholder immediately; redraws once images load.
+    function generateRoadRacerThumbnail(width, height, imgEl) {
       const c = document.createElement('canvas');
       c.width = width;
       c.height = height;
       const ctx = c.getContext('2d');
 
-      // Night sky
-      const sky = ctx.createLinearGradient(0, 0, 0, height * 0.4);
-      sky.addColorStop(0, '#0a0a2e');
-      sky.addColorStop(1, '#1a1a4e');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, width, height);
+      const skyImg = new Image();
+      skyImg.src = '/games/road-racer/assets/sky-frame-0.png';
+      const birdImg = new Image();
+      birdImg.src = '/games/road-racer/assets/bird-frame-0.png';
+      const enemyImg = new Image();
+      enemyImg.src = '/games/road-racer/assets/enemy-frame-0.png';
+      const coinImg = new Image();
+      coinImg.src = '/games/road-racer/assets/coin-frame-0.png';
 
-      // Stars
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      [[0.1, 0.08], [0.3, 0.15], [0.55, 0.05], [0.7, 0.12], [0.9, 0.08]].forEach(([rx, ry]) => {
-        ctx.beginPath();
-        ctx.arc(rx * width, ry * height, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Road (perspective trapezoid)
-      const vanishX = width / 2;
-      const vanishY = height * 0.25;
-      const roadBottomW = width * 0.7;
-      const roadTopW = width * 0.08;
-
-      // Grass
-      ctx.fillStyle = '#1a3a1a';
-      ctx.fillRect(0, vanishY, width, height - vanishY);
-
-      // Road surface
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.moveTo(vanishX - roadTopW / 2, vanishY);
-      ctx.lineTo(vanishX + roadTopW / 2, vanishY);
-      ctx.lineTo(vanishX + roadBottomW / 2, height);
-      ctx.lineTo(vanishX - roadBottomW / 2, height);
-      ctx.closePath();
-      ctx.fill();
-
-      // Lane dashes
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 5; i++) {
-        const t = 0.2 + i * 0.16;
-        const lw = roadTopW + t * (roadBottomW - roadTopW);
-        const ly = vanishY + t * (height - vanishY);
-        const lx = vanishX - lw / 6;
-        const rx = vanishX + lw / 6;
-        if (i % 2 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(lx, ly);
-          ctx.lineTo(lx - 2, ly + 6);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(rx, ly);
-          ctx.lineTo(rx + 2, ly + 6);
-          ctx.stroke();
+      function draw() {
+        // Sky background
+        if (skyImg.complete && skyImg.naturalWidth > 0) {
+          ctx.drawImage(skyImg, 0, 0, width, height);
+        } else {
+          const sky = ctx.createLinearGradient(0, 0, 0, height);
+          sky.addColorStop(0, '#87CEEB');
+          sky.addColorStop(1, '#b8def5');
+          ctx.fillStyle = sky;
+          ctx.fillRect(0, 0, width, height);
         }
+        // Player bird
+        if (birdImg.complete && birdImg.naturalWidth > 0) {
+          ctx.drawImage(birdImg, width * 0.12, height * 0.28, 60, 60);
+        }
+        // Enemy birds
+        if (enemyImg.complete && enemyImg.naturalWidth > 0) {
+          ctx.drawImage(enemyImg, width * 0.55, height * 0.15, 55, 55);
+          ctx.drawImage(enemyImg, width * 0.75, height * 0.50, 45, 45);
+        }
+        // Coin
+        if (coinImg.complete && coinImg.naturalWidth > 0) {
+          ctx.drawImage(coinImg, width * 0.42, height * 0.58, 22, 22);
+        }
+
+        if (imgEl) imgEl.src = c.toDataURL();
       }
 
-      // Player car (red)
-      const carW = 20;
-      const carH = 32;
-      const carX = vanishX;
-      const carY = height * 0.85;
-      ctx.fillStyle = '#e74c3c';
-      ctx.beginPath();
-      ctx.roundRect(carX - carW / 2, carY - carH, carW, carH, 4);
-      ctx.fill();
-      // Windshield
-      ctx.fillStyle = 'rgba(100,180,255,0.5)';
-      ctx.fillRect(carX - carW * 0.3, carY - carH * 0.85, carW * 0.6, carH * 0.2);
-      // Headlights
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(carX - 5, carY - carH + 3, 2, 0, Math.PI * 2);
-      ctx.arc(carX + 5, carY - carH + 3, 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Enemy car (blue, in left lane)
-      const eCarW = 14;
-      const eCarH = 22;
-      const eX = vanishX - roadBottomW * 0.18;
-      const eY = height * 0.55;
-      ctx.fillStyle = '#3498db';
-      ctx.beginPath();
-      ctx.roundRect(eX - eCarW / 2, eY - eCarH, eCarW, eCarH, 3);
-      ctx.fill();
+      // Draw immediately (fallback gradient), then redraw when assets load
+      draw();
+      let loaded = 0;
+      const total = 4;
+      const onLoad = () => { loaded++; if (loaded >= total) draw(); };
+      skyImg.onload = onLoad;
+      birdImg.onload = onLoad;
+      enemyImg.onload = onLoad;
+      coinImg.onload = onLoad;
 
       return c.toDataURL();
     }
@@ -1153,102 +1207,71 @@
       return c.toDataURL();
     }
 
-    // --- Procedural Pinch Dash thumbnail ---
-    function generatePinchDashThumbnail(width, height) {
+    // --- Pinch Dash thumbnail — composites real game assets ---
+    function generatePinchDashThumbnail(width, height, imgEl) {
       const c = document.createElement('canvas');
       c.width = width;
       c.height = height;
       const ctx = c.getContext('2d');
 
-      // Dark background
-      ctx.fillStyle = '#05050f';
-      ctx.fillRect(0, 0, width, height);
+      const bgImg = new Image();
+      bgImg.src = '/games/pinch-dash/assets/bg.jpg';
+      const marioImg = new Image();
+      marioImg.src = '/games/pinch-dash/assets/mario-frame-0.png';
 
-      // Stars
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      [[0.08,0.1],[0.2,0.05],[0.45,0.15],[0.65,0.08],[0.82,0.18],[0.95,0.06]].forEach(([rx,ry]) => {
-        ctx.beginPath();
-        ctx.arc(rx * width, ry * height, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      function draw() {
+        // Background
+        if (bgImg.complete && bgImg.naturalWidth > 0) {
+          ctx.drawImage(bgImg, 0, 0, width, height);
+        } else {
+          const grad = ctx.createLinearGradient(0, 0, 0, height);
+          grad.addColorStop(0, '#87CEEB');
+          grad.addColorStop(1, '#b8def5');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        }
 
-      // Grid lines (neon blue)
-      ctx.strokeStyle = 'rgba(30,100,255,0.12)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < width; x += 30) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height * 0.82); ctx.stroke();
+        const groundY = height * 0.725;
+
+        // Mario
+        if (marioImg.complete && marioImg.naturalWidth > 0) {
+          ctx.drawImage(marioImg, width * 0.18, groundY - 34, 32, 34);
+        }
+
+        // Rocks (matching the in-game style)
+        [[0.48, 14, 18], [0.65, 12, 16], [0.67, 12, 16]].forEach(([rx, rw, rh]) => {
+          const sx = rx * width;
+          ctx.fillStyle = '#7a6b5a';
+          ctx.beginPath();
+          ctx.moveTo(sx + 1, groundY);
+          ctx.lineTo(sx, groundY - rh * 0.6);
+          ctx.lineTo(sx + rw * 0.4, groundY - rh);
+          ctx.lineTo(sx + rw * 0.65, groundY - rh * 0.9);
+          ctx.lineTo(sx + rw, groundY - rh * 0.5);
+          ctx.lineTo(sx + rw - 1, groundY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#3d3229';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        });
+
+        // Stump
+        const bx = width * 0.82, bw = 16, bh = 16;
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(bx, groundY - bh, bw, bh);
+        ctx.strokeStyle = '#3d3229';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(bx, groundY - bh, bw, bh);
+
+        if (imgEl) imgEl.src = c.toDataURL();
       }
-      for (let y = 0; y < height * 0.82; y += 30) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-      }
 
-      const groundY = height * 0.82;
-
-      // Ground
-      ctx.fillStyle = '#0a0a1a';
-      ctx.fillRect(0, groundY, width, height - groundY);
-      ctx.shadowColor = '#00ffcc';
-      ctx.shadowBlur = 6;
-      ctx.strokeStyle = '#00ffcc';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, groundY);
-      ctx.lineTo(width, groundY);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Spikes
-      const spikeW = 14, spikeH = 20;
-      [[0.42, 1], [0.5, 1], [0.7, 1], [0.72, 1]].forEach(([rx]) => {
-        const sx = rx * width;
-        ctx.shadowColor = '#ff8800';
-        ctx.shadowBlur = 6;
-        ctx.fillStyle = '#ff6600';
-        ctx.beginPath();
-        ctx.moveTo(sx, groundY);
-        ctx.lineTo(sx + spikeW, groundY);
-        ctx.lineTo(sx + spikeW / 2, groundY - spikeH);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-
-      // Block
-      const bx = width * 0.84, bw = 18, bh = 18;
-      ctx.shadowColor = '#00ffcc';
-      ctx.shadowBlur = 6;
-      ctx.fillStyle = '#006644';
-      ctx.fillRect(bx, groundY - bh, bw, bh);
-      ctx.strokeStyle = '#00ffcc';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx, groundY - bh, bw, bh);
-      ctx.shadowBlur = 0;
-
-      // Cube
-      const cubeX = width * 0.22, cubeY = groundY - 16, cubeS = 22;
-      ctx.shadowColor = '#4488ff';
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = '#1a3aff';
-      ctx.fillRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS, cubeS);
-      ctx.strokeStyle = '#4488ff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS, cubeS);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.fillRect(cubeX - cubeS / 2, cubeY - cubeS / 2, cubeS / 2, cubeS / 2);
-
-      // Neon geometric shape (purple outline)
-      ctx.strokeStyle = 'rgba(180,0,255,0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      const cx = width * 0.88, cy = height * 0.25, cr = 22;
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
-        if (i === 0) ctx.moveTo(cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
-        else ctx.lineTo(cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
-      }
-      ctx.closePath();
-      ctx.stroke();
+      draw();
+      let loaded = 0;
+      const onLoad = () => { loaded++; if (loaded >= 2) draw(); };
+      bgImg.onload = onLoad;
+      marioImg.onload = onLoad;
 
       return c.toDataURL();
     }
@@ -1296,19 +1319,27 @@
       img.className = 'card-thumbnail';
       img.alt = game.title;
       if (game.available && game.id === 'flappy-bird') {
-        img.src = generateFlappyThumbnail(thumbW, thumbH);
+        img.src = generateFlappyThumbnail(thumbW, thumbH, img);
       } else if (game.available && game.id === 'road-racer') {
-        img.src = generateRoadRacerThumbnail(thumbW, thumbH);
+        img.src = generateRoadRacerThumbnail(thumbW, thumbH, img);
       } else if (game.available && game.id === 'fruit-ninja') {
         img.src = generateFruitNinjaThumbnail(thumbW, thumbH);
       } else if (game.available && game.id === 'pong') {
         img.src = generatePongThumbnail(thumbW, thumbH);
       } else if (game.available && game.id === 'pinch-dash') {
-        img.src = generatePinchDashThumbnail(thumbW, thumbH);
+        img.src = generatePinchDashThumbnail(thumbW, thumbH, img);
       } else {
         img.src = generatePlaceholderThumbnail(thumbW, thumbH, placeholderHues[hueIdx++] || 220);
       }
       card.appendChild(img);
+
+      // Tag badge
+      if (game.tag) {
+        const tag = document.createElement('div');
+        tag.className = 'card-tag';
+        tag.textContent = game.tag;
+        card.appendChild(tag);
+      }
 
       // Info
       const info = document.createElement('div');

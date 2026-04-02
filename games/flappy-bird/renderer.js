@@ -3,61 +3,59 @@
 const GROUND_HEIGHT = 80;
 const GRASS_HEIGHT = 16;
 
-// Cloud state
-const clouds = [];
-let cloudsInitialized = false;
+// Animated sky background — 12 extracted PNG frames
+const BG_FRAME_COUNT = 12;
+const BG_FRAME_DURATION = 120; // ms per frame
+const bgFrames = [];
+for (let i = 0; i < BG_FRAME_COUNT; i++) {
+  const img = document.createElement('img');
+  img.src = `./assets/bg-frame-${i}.png`;
+  bgFrames.push(img);
+}
+let bgFrameIndex = 0;
+let bgFrameTimer = 0;
+let bgLastTimestamp = 0;
 
-function initClouds(gameWidth, gameHeight) {
-  if (cloudsInitialized) return;
-  cloudsInitialized = true;
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * gameWidth,
-      y: 30 + Math.random() * (gameHeight * 0.35),
-      size: 20 + Math.random() * 30,
-      speed: 0.2 + Math.random() * 0.3,
-    });
+/** Preload all background frames. Call from init(). */
+export function preloadBgFrames() {
+  return Promise.all(bgFrames.map(img => new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = resolve;
+    img.onerror = () => { console.error('Failed to load:', img.src); resolve(); };
+  })));
+}
+
+/** Advance background animation — call once per frame from game loop. */
+export function updateBgAnimation(timestamp) {
+  if (!bgLastTimestamp) { bgLastTimestamp = timestamp; return; }
+  const dtMs = timestamp - bgLastTimestamp;
+  bgLastTimestamp = timestamp;
+  bgFrameTimer += dtMs;
+  if (bgFrameTimer >= BG_FRAME_DURATION) {
+    bgFrameTimer -= BG_FRAME_DURATION;
+    bgFrameIndex = (bgFrameIndex + 1) % BG_FRAME_COUNT;
   }
 }
 
 export function getGroundY(gameHeight) {
-  return gameHeight - GROUND_HEIGHT;
+  return gameHeight; // no ground — full sky
 }
 
 export function drawBackground(ctx, gameWidth, gameHeight) {
-  // Sky gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, gameHeight - GROUND_HEIGHT);
-  grad.addColorStop(0, '#4FC3F7');
-  grad.addColorStop(0.5, '#81D4FA');
-  grad.addColorStop(1, '#B3E5FC');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, gameWidth, gameHeight - GROUND_HEIGHT);
-
-  // Clouds
-  initClouds(gameWidth, gameHeight);
-  for (const cloud of clouds) {
-    drawCloud(ctx, cloud.x, cloud.y, cloud.size);
+  const frame = bgFrames[bgFrameIndex];
+  if (frame && frame.complete && frame.naturalWidth > 0) {
+    ctx.drawImage(frame, 0, 0, gameWidth, gameHeight);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, gameHeight);
+    grad.addColorStop(0, '#c5dde8');
+    grad.addColorStop(1, '#e8eff4');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
   }
 }
 
 export function updateClouds(dt, gameWidth) {
-  for (const cloud of clouds) {
-    cloud.x -= cloud.speed * dt;
-    if (cloud.x < -cloud.size * 3) {
-      cloud.x = gameWidth + cloud.size * 2;
-      cloud.y = 30 + Math.random() * 200;
-    }
-  }
-}
-
-function drawCloud(ctx, x, y, size) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.beginPath();
-  ctx.arc(x, y, size, 0, Math.PI * 2);
-  ctx.arc(x + size * 0.8, y - size * 0.2, size * 0.7, 0, Math.PI * 2);
-  ctx.arc(x + size * 1.4, y, size * 0.6, 0, Math.PI * 2);
-  ctx.arc(x - size * 0.5, y + size * 0.1, size * 0.5, 0, Math.PI * 2);
-  ctx.fill();
+  // No-op — clouds are now part of the animated background
 }
 
 // Ground scroll offset

@@ -22,10 +22,10 @@ export const PLAYER_MAX_SPEED = 8;
 export const MAX_HEALTH = 3;
 export const INVINCIBILITY_FRAMES = 90; // 1.5 seconds at 60fps
 
-export const ENEMY_BIRD_W = 70;
-export const ENEMY_BIRD_H = 55;
-export const ENEMY_BIG_W = 90;
-export const ENEMY_BIG_H = 70;
+export const ENEMY_BIRD_W = 60;
+export const ENEMY_BIRD_H = 45;
+export const ENEMY_BIG_W = 80;
+export const ENEMY_BIG_H = 60;
 export const BIG_CHANCE = 0.2;
 
 export const COIN_SIZE = 30;
@@ -39,7 +39,7 @@ export const MIN_SPAWN_INTERVAL = 25;
 const SPEED_SCALE_FACTOR = 1.08;
 const SPAWN_REDUCE = 5;
 
-const COLLISION_INSET = 12;
+const COLLISION_INSET = 18;
 
 // ============================================================
 // LANE GEOMETRY

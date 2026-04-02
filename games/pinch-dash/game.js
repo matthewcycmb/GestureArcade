@@ -1,5 +1,5 @@
 import { GestureEngine, GESTURES } from '../../packages/gesture-engine/index.js';
-import { Cube, JUMP_VEL, COYOTE_MS } from './player.js';
+import { Cube, JUMP_VEL, COYOTE_MS, preloadMarioFrames, updateMarioAnimation } from './player.js';
 import { ObstacleManager } from './obstacles.js';
 import { checkCollision } from './collision.js';
 import { playJump, playDeath } from './audio.js';
@@ -7,6 +7,7 @@ import {
   updateBackground,
   drawBackground,
   drawGround,
+  preloadBgImage,
   drawHUD,
   drawStartScreen,
   drawDeadScreen,
@@ -19,7 +20,7 @@ const ctx = canvas.getContext('2d');
 
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
-export const GROUND_Y = GAME_HEIGHT - 80; // 460
+export const GROUND_Y = Math.floor(GAME_HEIGHT * 0.725); // align with grass line in bg.jpg
 export const CUBE_X = 173;
 
 canvas.width = GAME_WIDTH;
@@ -157,6 +158,9 @@ function gameLoop(timestamp) {
   const dt = Math.min((timestamp - lastTimestamp) / (1000 / 60), 1.5);
   lastTimestamp = timestamp;
 
+  // Advance sprite animations
+  updateMarioAnimation(timestamp);
+
   // Update
   const scrollSpeed = state === 'PLAYING' ? obsMgr.speed : 0;
   updateBackground(dt, scrollSpeed, GAME_WIDTH);
@@ -208,12 +212,14 @@ function gameLoop(timestamp) {
 }
 
 // --- Init ---
-// Start the game loop immediately so the player sees the start screen right away.
-// The gesture engine initializes in the background — the game is fully playable
-// via keyboard/mouse/touch even if the engine never loads.
-requestAnimationFrame(gameLoop);
+(async function init() {
+  // Preload sprites
+  await Promise.all([preloadMarioFrames(), preloadBgImage()]);
 
-(async function initEngine() {
+  // Start game loop
+  requestAnimationFrame(gameLoop);
+
+  // Gesture engine in background
   try {
     await engine.start();
     videoEl = engine.getVideoElement();

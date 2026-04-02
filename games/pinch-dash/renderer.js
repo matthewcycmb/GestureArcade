@@ -2,133 +2,42 @@
 
 const GROUND_HEIGHT = 80;
 
-// --- Parallax layers ---
-// Layer 1: stars
-const stars = [];
-let starsInit = false;
+// Background image
+const bgImg = document.createElement('img');
+bgImg.src = './assets/bg.jpg';
+let bgScrollX = 0;
 
-// Layer 2: grid lines
-let gridOffset = 0;
-
-// Ground scroll
-let groundOffset = 0;
-
-function initStars(gameWidth, gameHeight) {
-  if (starsInit) return;
-  starsInit = true;
-  for (let i = 0; i < 70; i++) {
-    stars.push({
-      x: Math.random() * gameWidth,
-      y: Math.random() * (gameHeight - GROUND_HEIGHT),
-      r: 0.4 + Math.random() * 1.2,
-      twinkleSpeed: 0.5 + Math.random() * 2,
-      twinkleOffset: Math.random() * Math.PI * 2,
-    });
-  }
+/** Preload background image. Call from init(). */
+export function preloadBgImage() {
+  return new Promise(resolve => {
+    if (bgImg.complete && bgImg.naturalWidth > 0) return resolve();
+    bgImg.onload = resolve;
+    bgImg.onerror = () => { console.error('Failed to load bg.jpg'); resolve(); };
+  });
 }
 
 export function updateBackground(dt, scrollSpeed, gameWidth) {
-  gridOffset = (gridOffset + scrollSpeed * 0.3 * dt) % 80;
-  groundOffset = (groundOffset + scrollSpeed * dt) % 40;
-
-  for (const s of stars) {
-    s.x -= scrollSpeed * 0.05 * dt;
-    if (s.x < -2) s.x += gameWidth + 4;
-  }
+  bgScrollX = (bgScrollX + scrollSpeed * 0.5 * dt) % gameWidth;
 }
 
 export function drawBackground(ctx, gameWidth, gameHeight) {
-  initStars(gameWidth, gameHeight);
-
-  // Gradient background
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, gameHeight - GROUND_HEIGHT);
-  bgGrad.addColorStop(0, '#06061a');
-  bgGrad.addColorStop(0.5, '#0a0a2e');
-  bgGrad.addColorStop(1, '#0d1030');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, gameWidth, gameHeight);
-
-  // Stars with twinkling
-  for (const s of stars) {
-    const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(performance.now() / 1000 * s.twinkleSpeed + s.twinkleOffset));
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${twinkle * 0.7})`;
-    ctx.fill();
-  }
-
-  // Perspective grid — horizontal lines converge toward horizon
-  const horizonY = gameHeight - GROUND_HEIGHT;
-  ctx.strokeStyle = 'rgba(30,80,255,0.04)';
-  ctx.lineWidth = 1;
-  // Vertical grid lines
-  for (let x = -gridOffset; x < gameWidth; x += 80) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, horizonY);
-    ctx.stroke();
-  }
-  // Horizontal grid lines (spaced further apart near top for depth)
-  for (let i = 0; i < 8; i++) {
-    const t = i / 8;
-    const y = horizonY * (0.3 + t * 0.7);
-    const alpha = 0.02 + t * 0.04;
-    ctx.strokeStyle = `rgba(30,80,255,${alpha})`;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(gameWidth, y);
-    ctx.stroke();
+  if (bgImg.complete && bgImg.naturalWidth > 0) {
+    // Seamless scrolling background
+    const x = Math.floor(-bgScrollX);
+    ctx.drawImage(bgImg, x, 0, gameWidth + 1, gameHeight);
+    ctx.drawImage(bgImg, x + gameWidth, 0, gameWidth + 1, gameHeight);
+  } else {
+    // Fallback sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, gameHeight);
+    grad.addColorStop(0, '#87CEEB');
+    grad.addColorStop(1, '#b8def5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, gameWidth, gameHeight);
   }
 }
 
 export function drawGround(ctx, gameWidth, gameHeight, groundY) {
-  // Ground fill — subtle gradient
-  const gndGrad = ctx.createLinearGradient(0, groundY, 0, gameHeight);
-  gndGrad.addColorStop(0, '#0c1025');
-  gndGrad.addColorStop(1, '#060810');
-  ctx.fillStyle = gndGrad;
-  ctx.fillRect(0, groundY, gameWidth, GROUND_HEIGHT);
-
-  // Primary edge line — bright glow
-  ctx.save();
-  ctx.shadowColor = '#00ffcc';
-  ctx.shadowBlur = 12;
-  ctx.strokeStyle = '#00ffcc';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY);
-  ctx.lineTo(gameWidth, groundY);
-  ctx.stroke();
-  ctx.restore();
-
-  // Secondary line underneath
-  ctx.strokeStyle = 'rgba(0,255,204,0.15)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY + 4);
-  ctx.lineTo(gameWidth, groundY + 4);
-  ctx.stroke();
-
-  // Scrolling tick marks
-  ctx.strokeStyle = 'rgba(0,255,204,0.12)';
-  ctx.lineWidth = 1;
-  for (let x = -groundOffset; x < gameWidth; x += 40) {
-    ctx.beginPath();
-    ctx.moveTo(x, groundY + 10);
-    ctx.lineTo(x, groundY + 22);
-    ctx.stroke();
-  }
-
-  // Dashed mid-line
-  ctx.strokeStyle = 'rgba(0,255,204,0.08)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([12, 28]);
-  ctx.lineDashOffset = -groundOffset;
-  ctx.beginPath();
-  ctx.moveTo(0, groundY + 40);
-  ctx.lineTo(gameWidth, groundY + 40);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // Ground is now part of the background image — no separate drawing needed
 }
 
 export function drawHUD(ctx, score, speed, gameWidth) {

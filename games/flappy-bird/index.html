@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flappy Bird — Gesture Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #000; }
+    body { overflow: hidden; background: #0d1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     canvas {
       display: block;
       position: fixed;
@@ -21,57 +23,59 @@
       z-index: 100;
       width: 40px;
       height: 40px;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.25);
-      background: rgba(0,0,0,0.45);
-      backdrop-filter: blur(4px);
+      border-radius: 0;
+      border: 2px solid rgba(88, 166, 255, 0.25);
+      background: rgba(13, 17, 23, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
+      transition: background 0.1s steps(2), border-color 0.1s steps(2);
       text-decoration: none;
     }
     .back-btn:hover {
-      background: rgba(0,0,0,0.7);
-      border-color: rgba(255,255,255,0.5);
+      background: rgba(88, 166, 255, 0.15);
+      border-color: #58a6ff;
+      box-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
     }
     .back-btn svg {
       width: 20px;
       height: 20px;
-      fill: rgba(255,255,255,0.8);
+      fill: #58a6ff;
     }
 
     /* ---- Lobby overlay ---- */
     #lobby-ui {
-      display: none; /* shown by JS on init */
+      display: none;
       position: fixed;
       inset: 0;
       z-index: 200;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(6px);
+      background: rgba(13, 17, 23, 0.85);
     }
 
     .lobby-card {
-      background: rgba(20, 30, 48, 0.95);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 16px;
-      padding: 32px 28px;
+      background: #161b22;
+      border: 2px solid rgba(88, 166, 255, 0.25);
+      border-radius: 0;
+      padding: 36px 28px;
       width: min(340px, 90vw);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 20px;
       color: #fff;
-      font-family: sans-serif;
+      box-shadow: 0 0 20px rgba(88, 166, 255, 0.15);
     }
 
     .lobby-title {
-      font-size: 22px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      color: #58a6ff;
+      text-shadow: 0 0 12px rgba(88, 166, 255, 0.4);
     }
 
     .mp-section {
@@ -81,79 +85,96 @@
       gap: 14px;
     }
 
-    /* Sections hidden by default; JS shows the active one */
     .mp-section { display: none; }
 
     .btn {
       width: 100%;
-      padding: 13px 0;
-      border-radius: 10px;
-      border: none;
-      font-size: 16px;
-      font-weight: bold;
+      padding: 14px 0;
+      border-radius: 0;
+      border: 2px solid transparent;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
       cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s;
+      transition: all 0.1s steps(2);
     }
     .btn:active { transform: scale(0.97); }
 
     .btn-primary {
-      background: #F7DC6F;
-      color: #1a1a1a;
+      background: #58a6ff;
+      color: #0d1117;
+      border-color: #58a6ff;
+    }
+    .btn-primary:hover {
+      background: #79c0ff;
+      border-color: #79c0ff;
+      box-shadow: 0 0 12px rgba(88, 166, 255, 0.4);
     }
     .btn-secondary {
-      background: #5DADE2;
-      color: #fff;
+      background: rgba(88, 166, 255, 0.15);
+      color: #58a6ff;
+      border-color: rgba(88, 166, 255, 0.4);
+    }
+    .btn-secondary:hover {
+      background: rgba(88, 166, 255, 0.25);
+      border-color: #58a6ff;
+      box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
     }
     .btn-ghost {
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.7);
-      border: 1px solid rgba(255,255,255,0.15);
-      font-size: 14px;
-      padding: 10px 0;
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      border: 2px solid rgba(255,255,255,0.15);
+      font-size: 9px;
+      padding: 11px 0;
     }
-    .btn:hover { opacity: 0.88; }
+    .btn-ghost:hover {
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.3);
+    }
 
     .code-display {
-      font-size: 42px;
-      font-weight: bold;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 28px;
       letter-spacing: 10px;
-      color: #F7DC6F;
+      color: #58a6ff;
+      text-shadow: 0 0 16px rgba(88, 166, 255, 0.5);
       text-align: center;
       padding: 6px 0;
     }
 
     .status-text {
-      font-size: 14px;
-      color: rgba(255,255,255,0.65);
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
       text-align: center;
     }
 
     .code-input {
       width: 100%;
       padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.07);
+      border-radius: 0;
+      border: 2px solid rgba(88, 166, 255, 0.25);
+      background: rgba(88, 166, 255, 0.06);
       color: #fff;
-      font-size: 28px;
-      font-weight: bold;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 20px;
       letter-spacing: 8px;
       text-align: center;
       text-transform: uppercase;
       outline: none;
     }
     .code-input::placeholder {
-      color: rgba(255,255,255,0.25);
-      font-size: 20px;
+      color: rgba(255,255,255,0.2);
+      font-size: 14px;
       letter-spacing: 4px;
     }
     .code-input:focus {
-      border-color: rgba(255,255,255,0.45);
+      border-color: #58a6ff;
+      box-shadow: 0 0 8px rgba(88, 166, 255, 0.3);
     }
 
     .error-text {
-      font-size: 13px;
-      color: #E74C3C;
+      font-size: 12px;
+      color: #f85149;
       text-align: center;
       min-height: 18px;
     }
@@ -166,8 +187,7 @@
       z-index: 300;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(4px);
+      background: rgba(13, 17, 23, 0.8);
     }
   </style>
 </head>
@@ -181,7 +201,7 @@
   <!-- ===== Lobby overlay ===== -->
   <div id="lobby-ui">
     <div class="lobby-card">
-      <div class="lobby-title">Flappy Bird</div>
+      <div class="lobby-title">FLAPPY BIRD</div>
 
       <!-- Main menu -->
       <div class="mp-section" id="mp-main">
@@ -223,7 +243,7 @@
   <!-- ===== MP Game Over overlay ===== -->
   <div id="mp-game-over">
     <div class="lobby-card">
-      <div class="lobby-title">Game Over</div>
+      <div class="lobby-title">GAME OVER</div>
       <div class="status-text" id="mp-result-msg" style="font-size:16px;color:#fff;text-align:center;"></div>
       <button class="btn btn-primary" id="btn-play-again">Play Again</button>
       <button class="btn btn-ghost" id="btn-mp-quit">Main Menu</button>

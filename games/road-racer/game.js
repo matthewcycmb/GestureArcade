@@ -33,20 +33,52 @@ window.addEventListener('resize', resizeCanvas);
 // ============================================================
 // SPRITE LOADING
 // ============================================================
-const playerBirdImg = document.createElement('img');
-playerBirdImg.src = './assets/bird.gif';
-playerBirdImg.style.position = 'absolute';
-playerBirdImg.style.left = '-9999px';
-document.body.appendChild(playerBirdImg);
+// Preload helper — creates an Image and starts loading.
+function createSprite(src) {
+  const img = new Image();
+  img.src = src;
+  return img;
+}
 
-const skyBgImg = document.createElement('img');
-skyBgImg.src = './assets/sky-bg.gif';
-skyBgImg.style.position = 'absolute';
-skyBgImg.style.left = '-9999px';
-document.body.appendChild(skyBgImg);
+// Bird animation — 6 extracted PNG frames at 200ms each.
+// canvas.drawImage() cannot animate GIFs, so we cycle frames manually.
+const BIRD_FRAME_COUNT = 6;
+const BIRD_FRAME_DURATION = 200; // ms per frame
+const birdFrames = [];
+for (let i = 0; i < BIRD_FRAME_COUNT; i++) {
+  birdFrames.push(createSprite(`./assets/bird-frame-${i}.png`));
+}
+let birdFrameIndex = 0;
+let birdFrameTimer = 0;
 
-const planeImg = new Image();
-planeImg.src = './assets/plane.png';
+// Sky background animation — 60 extracted PNG frames at 80ms each.
+const SKY_FRAME_COUNT = 60;
+const SKY_FRAME_DURATION = 80; // ms per frame
+const skyFrames = [];
+for (let i = 0; i < SKY_FRAME_COUNT; i++) {
+  skyFrames.push(createSprite(`./assets/sky-frame-${i}.png`));
+}
+let skyFrameIndex = 0;
+let skyFrameTimer = 0;
+// Enemy bird animation — 12 extracted PNG frames at 100ms each (replaces plane.png).
+const ENEMY_FRAME_COUNT = 12;
+const ENEMY_FRAME_DURATION = 100; // ms per frame
+const enemyFrames = [];
+for (let i = 0; i < ENEMY_FRAME_COUNT; i++) {
+  enemyFrames.push(createSprite(`./assets/enemy-frame-${i}.png`));
+}
+let enemyFrameIndex = 0;
+let enemyFrameTimer = 0;
+
+// Coin animation — 6 extracted PNG frames at 120ms each.
+const COIN_FRAME_COUNT = 6;
+const COIN_FRAME_DURATION = 120; // ms per frame
+const coinFrames = [];
+for (let i = 0; i < COIN_FRAME_COUNT; i++) {
+  coinFrames.push(createSprite(`./assets/coin-frame-${i}.png`));
+}
+let coinFrameIndex = 0;
+let coinFrameTimer = 0;
 
 // ============================================================
 // AUDIO (procedural Web Audio)
@@ -278,9 +310,17 @@ function drawSpeedUpFlash(dt) {
 // ============================================================
 // SKY BACKGROUND (gif)
 // ============================================================
-function drawSky() {
-  if (skyBgImg.complete && skyBgImg.naturalWidth > 0) {
-    ctx.drawImage(skyBgImg, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+function drawSky(dt) {
+  if (state === 'PLAYING') {
+    skyScrollX = (skyScrollX + 1.5 * dt) % GAME_WIDTH;
+  }
+  const skyFrame = skyFrames[skyFrameIndex];
+  if (skyFrame && skyFrame.complete && skyFrame.naturalWidth > 0) {
+    // Draw two copies side-by-side for seamless horizontal scroll.
+    // Floor x and overlap by 1px to prevent sub-pixel seam.
+    const x = Math.floor(-skyScrollX);
+    ctx.drawImage(skyFrame, x, 0, GAME_WIDTH + 1, GAME_HEIGHT);
+    ctx.drawImage(skyFrame, x + GAME_WIDTH, 0, GAME_WIDTH + 1, GAME_HEIGHT);
   } else {
     const sky = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
     sky.addColorStop(0, '#87CEEB');
@@ -296,10 +336,11 @@ function drawSky() {
 function drawPlayerBird(x, y, w, h, invincible) {
   if (invincible) {
     // Blink effect during invincibility
-    if (Math.floor(Date.now() / 80) % 2 === 0) return; // skip drawing every other 80ms
+    if (Math.floor(Date.now() / 80) % 2 === 0) return;
   }
-  if (playerBirdImg.complete && playerBirdImg.naturalWidth > 0) {
-    ctx.drawImage(playerBirdImg, x - w / 2, y - h / 2, w, h);
+  const frame = birdFrames[birdFrameIndex];
+  if (frame && frame.complete && frame.naturalWidth > 0) {
+    ctx.drawImage(frame, x - w / 2, y - h / 2, w, h);
   } else {
     ctx.fillStyle = '#2244cc';
     ctx.beginPath();
@@ -309,8 +350,9 @@ function drawPlayerBird(x, y, w, h, invincible) {
 }
 
 function drawEnemy(x, y, w, h) {
-  if (planeImg.complete && planeImg.naturalWidth > 0) {
-    ctx.drawImage(planeImg, x - w / 2, y - h / 2, w, h);
+  const frame = enemyFrames[enemyFrameIndex];
+  if (frame && frame.complete && frame.naturalWidth > 0) {
+    ctx.drawImage(frame, x - w / 2, y - h / 2, w, h);
   } else {
     ctx.fillStyle = '#4488cc';
     ctx.fillRect(x - w / 2, y - h / 2, w, h);
@@ -325,32 +367,20 @@ function drawEnemies(enemies) {
 
 function drawCoin(x, y, timestamp) {
   const size = COIN_SIZE;
-  const pulse = 1 + Math.sin(timestamp / 200) * 0.1;
-  const r = size / 2 * pulse;
-
-  // Gold circle
-  ctx.save();
-  ctx.fillStyle = '#FFD700';
-  ctx.shadowColor = '#FFA500';
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  // Inner shine
-  ctx.fillStyle = '#FFF8DC';
-  ctx.beginPath();
-  ctx.arc(x - r * 0.2, y - r * 0.2, r * 0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // "$" symbol
-  ctx.fillStyle = '#B8860B';
-  ctx.font = `bold ${Math.floor(size * 0.55)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('$', x + 1, y + 1);
-  ctx.restore();
+  const frame = coinFrames[coinFrameIndex];
+  if (frame && frame.complete && frame.naturalWidth > 0) {
+    ctx.drawImage(frame, x - size / 2, y - size / 2, size, size);
+  } else {
+    // Fallback gold circle
+    const pulse = 1 + Math.sin(timestamp / 200) * 0.1;
+    const r = size / 2 * pulse;
+    ctx.save();
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawCoins(coins, timestamp) {
@@ -534,7 +564,7 @@ function drawHUD(score) {
 // SCREENS
 // ============================================================
 function drawMenuScreen(timestamp) {
-  drawSky();
+  drawSky(1);
 
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -552,11 +582,12 @@ function drawMenuScreen(timestamp) {
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.fillText('Point to steer \u2022 Dodge planes \u2022 Collect coins', GAME_WIDTH / 2, GAME_HEIGHT * 0.40);
 
-  // Draw player bird in menu
-  if (playerBirdImg.complete && playerBirdImg.naturalWidth > 0) {
+  // Draw animated player bird in menu
+  const menuFrame = birdFrames[birdFrameIndex];
+  if (menuFrame && menuFrame.complete && menuFrame.naturalWidth > 0) {
     const bw = 120;
-    const bh = bw * (playerBirdImg.naturalHeight / playerBirdImg.naturalWidth);
-    ctx.drawImage(playerBirdImg, GAME_WIDTH / 2 - bw / 2, GAME_HEIGHT * 0.48, bw, bh);
+    const bh = bw * (menuFrame.naturalHeight / menuFrame.naturalWidth);
+    ctx.drawImage(menuFrame, GAME_WIDTH / 2 - bw / 2, GAME_HEIGHT * 0.48, bw, bh);
   }
 
   const alpha = 0.5 + Math.sin(timestamp / 500) * 0.3;
@@ -620,6 +651,7 @@ let enemyManager = new EnemyManager();
 let coinManager = new CoinManager();
 let lastTimestamp = 0;
 let gameOverCooldown = 0;
+let skyScrollX = 0;
 
 function resetGame() {
   playerY = GAME_HEIGHT / 2;
@@ -632,6 +664,7 @@ function resetGame() {
   shakeFrames = 0;
   speedUpTimer = 0;
   coinPopups.length = 0;
+  skyScrollX = 0;
 }
 
 function saveHighScore(score) {
@@ -722,7 +755,36 @@ function gameLoop(timestamp) {
   }
 
   const dt = Math.min((timestamp - lastTimestamp) / (1000 / 60), 1.5);
+  const dtMs = timestamp - lastTimestamp;
   lastTimestamp = timestamp;
+
+  // Advance bird animation frame
+  birdFrameTimer += dtMs;
+  if (birdFrameTimer >= BIRD_FRAME_DURATION) {
+    birdFrameTimer -= BIRD_FRAME_DURATION;
+    birdFrameIndex = (birdFrameIndex + 1) % BIRD_FRAME_COUNT;
+  }
+
+  // Advance sky background animation frame
+  skyFrameTimer += dtMs;
+  if (skyFrameTimer >= SKY_FRAME_DURATION) {
+    skyFrameTimer -= SKY_FRAME_DURATION;
+    skyFrameIndex = (skyFrameIndex + 1) % SKY_FRAME_COUNT;
+  }
+
+  // Advance enemy bird animation frame
+  enemyFrameTimer += dtMs;
+  if (enemyFrameTimer >= ENEMY_FRAME_DURATION) {
+    enemyFrameTimer -= ENEMY_FRAME_DURATION;
+    enemyFrameIndex = (enemyFrameIndex + 1) % ENEMY_FRAME_COUNT;
+  }
+
+  // Advance coin animation frame
+  coinFrameTimer += dtMs;
+  if (coinFrameTimer >= COIN_FRAME_DURATION) {
+    coinFrameTimer -= COIN_FRAME_DURATION;
+    coinFrameIndex = (coinFrameIndex + 1) % COIN_FRAME_COUNT;
+  }
 
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -796,7 +858,7 @@ function gameLoop(timestamp) {
   }
 
   // Draw everything
-  drawSky();
+  drawSky(dt);
   drawCoins(coinManager.coins, timestamp);
   drawEnemies(enemyManager.enemies);
   drawPlayerBird(PLAYER_X, playerY, PLAYER_W, PLAYER_H, invincibilityTimer > 0);
@@ -822,7 +884,23 @@ function gameLoop(timestamp) {
 // ============================================================
 // INIT
 // ============================================================
+function loadImage(img) {
+  return new Promise((resolve) => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = () => resolve();
+    img.onerror = () => { console.error('Failed to load:', img.src); resolve(); };
+  });
+}
+
 async function init() {
+  // Wait for all sprites to load (or fail gracefully)
+  await Promise.all([
+    ...birdFrames.map(loadImage),
+    ...skyFrames.map(loadImage),
+    ...enemyFrames.map(loadImage),
+    ...coinFrames.map(loadImage),
+  ]);
+
   try {
     await engine.start();
     videoEl = engine.getVideoElement();

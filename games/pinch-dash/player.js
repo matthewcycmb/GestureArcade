@@ -3,9 +3,43 @@
 export const GRAVITY = 0.55;
 export const JUMP_VEL = -11;
 const MAX_FALL = 14;
-export const CUBE_SIZE = 40;
-const HITBOX_INSET = 4;
+export const CUBE_SIZE = 64;
+const HITBOX_INSET = 6;
 export const COYOTE_MS = 80;
+
+// Mario sprite animation — 8 extracted PNG frames
+const MARIO_FRAME_COUNT = 8;
+const MARIO_FRAME_DURATION = 80; // ms per frame
+const marioFrames = [];
+for (let i = 0; i < MARIO_FRAME_COUNT; i++) {
+  const img = document.createElement('img');
+  img.src = `./assets/mario-frame-${i}.png`;
+  marioFrames.push(img);
+}
+let marioFrameIndex = 0;
+let marioFrameTimer = 0;
+let marioLastTimestamp = 0;
+
+/** Preload all mario frames. Call from init(). */
+export function preloadMarioFrames() {
+  return Promise.all(marioFrames.map(img => new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+    img.onload = resolve;
+    img.onerror = () => { console.error('Failed to load:', img.src); resolve(); };
+  })));
+}
+
+/** Advance mario animation — call once per frame from game loop. */
+export function updateMarioAnimation(timestamp) {
+  if (!marioLastTimestamp) { marioLastTimestamp = timestamp; return; }
+  const dtMs = timestamp - marioLastTimestamp;
+  marioLastTimestamp = timestamp;
+  marioFrameTimer += dtMs;
+  if (marioFrameTimer >= MARIO_FRAME_DURATION) {
+    marioFrameTimer -= MARIO_FRAME_DURATION;
+    marioFrameIndex = (marioFrameIndex + 1) % MARIO_FRAME_COUNT;
+  }
+}
 
 export class Cube {
   constructor(x, groundY) {
@@ -147,12 +181,13 @@ export class Cube {
     // Draw trail behind cube
     for (const t of this.trail) {
       ctx.save();
-      ctx.globalAlpha = t.alpha * 0.4;
+      ctx.globalAlpha = t.alpha * 0.3;
       ctx.translate(t.x, t.y);
-      ctx.rotate((t.rotation * Math.PI) / 180);
-      ctx.fillStyle = '#4488ff';
       const hs = t.size / 2;
-      ctx.fillRect(-hs, -hs, t.size, t.size);
+      const frame = marioFrames[marioFrameIndex];
+      if (frame && frame.complete && frame.naturalWidth > 0) {
+        ctx.drawImage(frame, -hs, -hs, t.size, t.size);
+      }
       ctx.restore();
     }
 
@@ -171,36 +206,13 @@ export class Cube {
 
     if (this.dead) return;
 
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate((this.rotation * Math.PI) / 180);
-
-    // Outer glow
-    ctx.shadowColor = '#4488ff';
-    ctx.shadowBlur = 18;
-
-    // Body — gradient fill
-    const grad = ctx.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2);
-    grad.addColorStop(0, '#3355ff');
-    grad.addColorStop(1, '#1122aa');
-    ctx.fillStyle = grad;
-    ctx.fillRect(-s / 2, -s / 2, s, s);
-
-    // Border
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#6699ff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-s / 2, -s / 2, s, s);
-
-    // Top-left shine
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.fillRect(-s / 2, -s / 2, s, s / 2);
-
-    // Inner highlight square
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(-s / 4, -s / 4, s / 2, s / 2);
-
-    ctx.restore();
+    const frame = marioFrames[marioFrameIndex];
+    if (frame && frame.complete && frame.naturalWidth > 0) {
+      ctx.drawImage(frame, this.x - s / 2, this.y - s / 2, s, s);
+    } else {
+      // Fallback rectangle
+      ctx.fillStyle = '#3355ff';
+      ctx.fillRect(this.x - s / 2, this.y - s / 2, s, s);
+    }
   }
 }

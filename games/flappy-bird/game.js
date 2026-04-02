@@ -1,5 +1,5 @@
 import { GestureEngine, GESTURES } from '../../packages/gesture-engine/index.js';
-import { Bird } from './bird.js';
+import { Bird, preloadCatFrames, updateCatAnimation } from './bird.js';
 import { PipeManager } from './pipes.js';
 import { checkCollision } from './collision.js';
 import { playFlap, playScore, playHit } from './audio.js';
@@ -9,6 +9,8 @@ import {
   getGroundY,
   drawBackground,
   updateClouds,
+  preloadBgFrames,
+  updateBgAnimation,
   drawGround,
   drawScore,
   drawMenuScreen,
@@ -22,15 +24,15 @@ import {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const GAME_WIDTH = 480;
-const BASE_HEIGHT = 640;
+const GAME_WIDTH = 960;
+const BASE_HEIGHT = 540;
 
 const viewportAspect = window.innerWidth / window.innerHeight;
 const baseAspect = GAME_WIDTH / BASE_HEIGHT;
 const GAME_HEIGHT = viewportAspect < baseAspect
   ? Math.round(GAME_WIDTH / viewportAspect)
   : BASE_HEIGHT;
-const GROUND_Y = getGroundY(GAME_HEIGHT);
+const GROUND_Y = GAME_HEIGHT; // no ground — full sky
 
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
@@ -502,6 +504,9 @@ function gameLoop(timestamp) {
   const dt = Math.min((timestamp - lastTimestamp) / (1000 / 60), 1.5);
   lastTimestamp = timestamp;
 
+  // Advance sprite animations
+  updateCatAnimation(timestamp);
+  updateBgAnimation(timestamp);
   updateClouds(dt, GAME_WIDTH);
 
   if (state === 'MENU') {
@@ -584,10 +589,7 @@ function gameLoop(timestamp) {
     pipeManager.draw(ctx);
   }
 
-  drawGround(ctx, GAME_WIDTH, GAME_HEIGHT,
-    (['MENU','READY','PLAYING','MP_COUNTDOWN'].includes(state)) ? pipeManager.speed : 0,
-    dt
-  );
+  // Ground removed — full sky background
 
   if (mode === 'multi' && opponentBird && (state === 'PLAYING' || state === 'MP_GAME_OVER')) {
     drawOpponentBird(ctx, opponentBird);
@@ -652,6 +654,9 @@ function drawMpCountdown(ctx, gameWidth, gameHeight) {
 async function init() {
   // Show lobby overlay on load
   showLobby('mp-main');
+
+  // Preload sprite frames
+  await Promise.all([preloadCatFrames(), preloadBgFrames()]);
 
   try {
     await engine.start();
